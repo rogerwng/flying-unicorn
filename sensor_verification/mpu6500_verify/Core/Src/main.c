@@ -78,6 +78,9 @@ int main(void)
   /* USER CODE BEGIN Init */
 
   mpu_init(&hi2c2);
+  float acc[3];
+  float gyro[3];
+  mpu_readData(acc, gyro);
 
   /* USER CODE END Init */
 
@@ -200,6 +203,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);

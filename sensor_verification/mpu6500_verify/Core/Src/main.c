@@ -77,6 +77,8 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
+  mpu_init(&hi2c2);
+
   /* USER CODE END Init */
 
   /* Configure the system clock */

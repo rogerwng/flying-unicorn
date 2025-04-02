@@ -41,7 +41,6 @@ static void mpu_reg_read(uint8_t reg, uint8_t* pBuff, uint16_t nBytes, uint32_t 
  * 		check mpu connection, verify device, reset device, initialize sensor dplf and full range scale
  * 	INPUTS:
  * 		hi2c - pointer to i2c handle
- * 		addr - 7bit address of i2c device (should alr be left shifted by 1)
  * */
 void mpu_init(I2C_HandleTypeDef *hi2c) {
 	myhi2c = hi2c;
@@ -88,15 +87,15 @@ static void mpu_readRawData(uint16_t* pAccBuffer, uint16_t* pGyroBuffer) {
 	// read acc
 	mpu_reg_read(MPUREG_ACC, regBuffer, 6, timeout);
 	// store into buffer
-	pAccBuffer[0] = (regBuffer[0] << 8) | regBuffer[1];
-	pAccBuffer[1] = (regBuffer[2] << 8) | regBuffer[3];
-	pAccBuffer[2] = (regBuffer[4] << 8) | regBuffer[5];
+	pAccBuffer[0] = ((uint16_t)regBuffer[0] << 8) | (uint16_t)regBuffer[1];
+	pAccBuffer[1] = ((uint16_t)regBuffer[2] << 8) | (uint16_t)regBuffer[3];
+	pAccBuffer[2] = ((uint16_t)regBuffer[4] << 8) | (uint16_t)regBuffer[5];
 	// read gyro
 	mpu_reg_read(MPUREG_GYRO, regBuffer, 6, timeout);
 	// store into buffer
-	pGyroBuffer[0] = (regBuffer[0] << 8) | regBuffer[1];
-	pGyroBuffer[1] = (regBuffer[2] << 8) | regBuffer[3];
-	pGyroBuffer[2] = (regBuffer[4] << 8) | regBuffer[5];
+	pGyroBuffer[0] = ((uint16_t)regBuffer[0] << 8) | (uint16_t)regBuffer[1];
+	pGyroBuffer[1] = ((uint16_t)regBuffer[2] << 8) | (uint16_t)regBuffer[3];
+	pGyroBuffer[2] = ((uint16_t)regBuffer[4] << 8) | (uint16_t)regBuffer[5];
 }
 
 /**	Reading data from MPU in real units

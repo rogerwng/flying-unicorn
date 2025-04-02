@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "bmp280.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -76,7 +76,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  bmp_init(&hi2c2);
+  float altitude;
+  bmp_readData(&altitude);
   /* USER CODE END Init */
 
   /* Configure the system clock */

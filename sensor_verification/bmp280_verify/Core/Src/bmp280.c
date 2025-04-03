@@ -21,6 +21,7 @@
 I2C_HandleTypeDef* myhi2c;
 uint16_t compT[3];
 uint16_t compP[9];
+int32_t t_fine;
 
 /* Writing to registers */
 static void bmp_reg_write(uint8_t reg, uint8_t value, uint32_t timeout) {
@@ -89,35 +90,88 @@ static void bmp_readRawData(uint32_t* pPress, uint32_t* pTemp) {
 	*pTemp = ((uint32_t)buffer[3] << 12) | ((uint32_t)buffer[4] << 4) | ((uint32_t)buffer[5] >> 4);
 }
 
-/**	Converting raw pressure reading into float in Pascals
+/**	Converting raw temperature reading into float in Kelvin
+ * 	INPUT:
+ * 		t - raw temperature reading
+ * 	OUTPUT:
+ * 		temperature reading in degrees Celsius
+ * */
+static float convertRawTemp(int32_t tRaw) {
+	// define compensation variables
+	float dig_T1 = (float)compT[0];
+	float dig_T2 = (float)(int16_t)compT[1];
+	float dig_T3 = (float)(int16_t)compT[2];
+
+	// compensation formula edited from datasheet
+	float var1, var2, T;
+	var1 = ((((float)tRaw)/16384.0) - (dig_T1/1024.0)) * dig_T2;
+	var2 = ((((float)tRaw)/131072.0) - (dig_T1/8192.0)) * ((((float)tRaw)/131072.0) - dig_T1/8192.0) * dig_T3;
+	t_fine = (int32_t)(var1 + var2);
+	T = (var1 + var2) / 5120.0;
+	return T;
+}
+
+/**	Converting raw pressure reading into float in Pascals, note that temperature must be converted first (to init t_fine)
  * 	INPUT:
  * 		p - raw pressure reading
  * 	OUTPUT:
  * 		pressure reading in Pascals
  * */
-static float convertRawPressure(uint32_t p) {
+static float convertRawPressure(int32_t pRaw) {
+	// define compensation variables
+	float dig_P1 = (float)compP[0];
+	float dig_P2 = (float)(int16_t)compP[1];
+	float dig_P3 = (float)(int16_t)compP[2];
+	float dig_P4 = (float)(int16_t)compP[3];
+	float dig_P5 = (float)(int16_t)compP[4];
+	float dig_P6 = (float)(int16_t)compP[5];
+	float dig_P7 = (float)(int16_t)compP[6];
+	float dig_P8 = (float)(int16_t)compP[7];
+	float dig_P9 = (float)(int16_t)compP[8];
 
-}
-
-/**	Converting raw temperature reading into float in Kelvin
- * 	INPUT:
- * 		t - raw temperature reading
- * 	OUTPUT:
- * 		temperature reading in Kelvin
- * */
-static float convertRawTemp(uint32_t t) {
-
+	// compensation formula edited from datasheet
+	float var1, var2, p;
+	var1 = ((float)t_fine)/2.0 - 64000.0;
+	var2 = var1 * var1 * dig_P6 / 32768.0;
+	var2 = var2 + var1 * dig_P5 * 2.0;
+	var2 = (var2/4.0) + (dig_P4 * 65536.0);
+	var1 = (dig_P3 * var1 * var1 / 524288.0 + (dig_P2 * var1)) / 524288.0;
+	var1 = (1.0 + var1 / 32768.0) * dig_P1;
+	if (var1 == 0.0) {
+		return 0; // avoid exception division by zero
+	}
+	p = 1048576.0 - (float)pRaw;
+	p = (p - (var2 / 4096.0)) * 6250.0 / var1;
+	var1 = dig_P9 * p * p / 2147483648.0;
+	var2 = p * dig_P8 / 32768.0;
+	p = p + (var1 + var2 + dig_P7) / 16.0;
+	return p;
 }
 
 /**	Use pressure and temperature to calculate altitude
  * 	INPUT:
  * 		p - pressure reading in Pascals
- * 		t - temperature reading in Kelvin
  * 	OUTPUT:
  * 		altitude in meters
  * */
-static float calculateAltitude(float p, float t) {
+static float calculateAltitude(float p) {
+	float altitude;
 
+	// define constants
+	float T0 = 288.15; // temp @ sea level
+	float P0 = 101325.0; // air pressure @ sea level
+	float L = 0.0065; // temp lapse rate
+	float R = 8.31447; // univ gas constant
+	float g = 9.80665; // acceleration to gravity
+	float M = 0.0289644; // molar mass of air
+
+	float var1, var2, var3;
+	var1 = T0/L;
+	var2 = p/P0;
+	var3 = (R * L) / (g * M);
+	altitude = var1 * (powf(var2, var3) - 1);
+
+	return altitude;
 }
 
 /**	Reading final altitude measurement from BMP
@@ -125,14 +179,18 @@ static float calculateAltitude(float p, float t) {
  * 		pAlt - pointer to altitude measurement buffer
  * */
 void bmp_readData(float* pAlt) {
-	uint32_t pressure;
-	uint32_t temperature;
-	bmp_readRawData(&pressure, &temperature);
+	uint32_t rawPressure;
+	uint32_t rawTemperature;
+	bmp_readRawData(&rawPressure, &rawTemperature);
 
-	// convert raw data into real units
+	// raw data compensation, temperature must be done first
+	float pressure;
+	convertRawTemp((int32_t)rawTemperature);
+	pressure = convertRawPressure((int32_t)rawPressure);
 
-	// perform compensation and altitude calculation
+	// altitude calculation
+	float altitude = calculateAltitude(pressure);
 
 	// update altitude buffer
-	*pAlt = 0.0;
+	*pAlt = altitude;
 }

@@ -7,6 +7,7 @@
   */
 
 #include "main.h"
+#include <math.h>
 
 /* Initializing the sensor */
 void bmp_init(I2C_HandleTypeDef *hi2c);

@@ -45,7 +45,7 @@ void bmp_init(I2C_HandleTypeDef *hi2c) {
 	if (connectStatus == HAL_OK) {
 		// do smt
 		uint8_t whoami;
-		bmp_reg_read(BMPREG_WHOAMI, &whoami, 1, 100);
+		bmp_reg_read(BMPREG_WHOAMI, &whoami, 1, timeout);
 		if (whoami == 0x58) {
 			// bmp successful connection
 		} else {

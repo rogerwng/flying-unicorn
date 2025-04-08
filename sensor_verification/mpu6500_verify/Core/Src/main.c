@@ -57,6 +57,7 @@ static void MX_I2C2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
 /* USER CODE END 0 */
 
 /**
@@ -77,11 +78,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
-  mpu_init(&hi2c2);
-  float acc[3];
-  float gyro[3];
-  mpu_readData(acc, gyro);
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -96,6 +92,11 @@ int main(void)
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
+  mpu_init(&hi2c2);
+  float acc[3];
+  float gyro[3];
+  mpu_readData(acc, gyro);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,7 +104,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

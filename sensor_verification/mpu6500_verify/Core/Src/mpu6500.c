@@ -45,6 +45,7 @@ static void mpu_reg_read(uint8_t reg, uint8_t* pBuff, uint16_t nBytes, uint32_t 
 void mpu_init(I2C_HandleTypeDef *hi2c) {
 	myhi2c = hi2c;
 	uint32_t timeout = 100; // 100ms
+
 	// check device connection
 	HAL_StatusTypeDef connectStatus = HAL_I2C_IsDeviceReady(hi2c, MPUADDR, 1, timeout);
 	if (connectStatus == HAL_OK) {

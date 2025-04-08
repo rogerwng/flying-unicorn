@@ -76,9 +76,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  gy_init(&hi2c2);
-  float magBuff[3];
-  gy_readData(magBuff);
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -92,6 +90,10 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
+
+  gy_init(&hi2c2);
+  float magBuff[3];
+  gy_readData(magBuff);
 
   /* USER CODE END 2 */
 

@@ -104,6 +104,7 @@ int main(void)
   setSerialHUART(&huart2);
   serialPrint("Initializing MPU.\r\n");
   mpu_init(&hi2c2);
+  mpu_calibrateBias();
 
   /* USER CODE END 2 */
 
@@ -119,7 +120,7 @@ int main(void)
 	  mpu_readData(acc, gyro);
 
 	  char buffer[128];
-	  snprintf(buffer, sizeof(buffer), "Acc: X=%.2f, Y=%.2f, Z=%.2f\r\n", acc[0], acc[1], acc[2]);
+	  snprintf(buffer, sizeof(buffer), "Acc: X=%.3f, Y=%.3f, Z=%.3f, Gyro: X=%.3f, Y=%.3f, Z=%.3f\r\n", acc[0], acc[1], acc[2], gyro[0], gyro[1], gyro[2]);
 	  serialPrint(buffer);
 	  HAL_Delay(500);
     /* USER CODE BEGIN 3 */

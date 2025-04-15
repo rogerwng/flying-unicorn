@@ -28,6 +28,10 @@
 
 I2C_HandleTypeDef* myhi2c;
 
+// calibration offsets
+float accBias[3] = {0.0, 0.0, 0.0};
+float gyroBias[3] = {0.0, 0.0, 0.0};
+
 /* Writing to registers */
 static void mpu_reg_write(uint8_t reg, uint8_t value, uint32_t timeout) {
 	HAL_I2C_Mem_Write(myhi2c, MPUADDR, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, timeout);
@@ -114,9 +118,55 @@ void mpu_readData(float* pAccBuffer, float* pGyroBuffer) {
 	uint16_t rawGyro[3];
 	mpu_readRawData(rawAcc, rawGyro);
 
-	// convert raw to m/s
+	// convert raw to real units and apply offset
 	for (int i = 0; i < 3; i++) {
-		pAccBuffer[i] = (int16_t)(rawAcc[i]) * ACCDATA_SCALE_FACTOR;
-		pGyroBuffer[i] = (int16_t)(rawGyro[i]) * GYRODATA_SCALE_FACTOR;
+		pAccBuffer[i] = (int16_t)(rawAcc[i]) * ACCDATA_SCALE_FACTOR - accBias[i];
+		pGyroBuffer[i] = (int16_t)(rawGyro[i]) * GYRODATA_SCALE_FACTOR - gyroBias[i];
 	}
+}
+
+/**	Calibrating sensor and adjusting offset
+ * */
+void mpu_calibrateBias() {
+	// arrays to store running mean
+	float accMean[3] = {0.0,  0.0, 0.0};
+	float gyroMean[3] = {0.0, 0.0, 0.0};
+
+	// read 5 data points and accumulate mean
+	//serialPrint("Calibrating MPU bias...sampling:\r\n");
+	for (int i = 0; i < 11; i++) {
+		float accBuff[3];
+		float gyroBuff[3];
+		mpu_readData(accBuff, gyroBuff);
+
+		// ignore the first read
+		if (i == 0) {
+			HAL_Delay(500); // wait for readings to stabilize
+			continue;
+		}
+
+		/**char buffer[128];
+		snprintf(buffer, sizeof(buffer), "Acc: X=%.3f, Y=%.3f, Z=%.3f\r\n", accBuff[0], accBuff[1], accBuff[2]);
+		serialPrint(buffer);*/
+
+		for (int j = 0; j < 3; j++) {
+			accMean[j] += accBuff[j]/10.0;
+			gyroMean[j] += gyroBuff[j]/10.0;
+		}
+
+		HAL_Delay(30);
+	}
+
+	// adjust acc-Z
+	accMean[2] -= 9.80665;
+
+	// store in global array
+	for (int i = 0; i < 3; i++) {
+		accBias[i] = accMean[i];
+		gyroBias[i] = gyroMean[i];
+	}
+
+	/**char buffer[128];
+	snprintf(buffer, sizeof(buffer), "Calibrating MPU bias...computed acc Xb=%.3f, Yb=%.3f, Zb=%.3f\r\n", accBias[0], accBias[1], accBias[2]);
+	serialPrint(buffer);*/
 }

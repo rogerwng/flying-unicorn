@@ -203,7 +203,7 @@ void SystemInit(void)
   *             or HSI_VALUE(*) multiplied/divided by the PLL factors.
   *         
   *         (*) HSI_VALUE is a constant defined in stm32f4xx_hal_conf.h file (default value
-  *             16 MHz) but the real value may vary depending on the variations
+  *             16 MHz) but the real value may vary depending on the variations/
   *             in voltage and temperature.   
   *    
   *         (**) HSE_VALUE is a constant defined in stm32f4xx_hal_conf.h file (its value

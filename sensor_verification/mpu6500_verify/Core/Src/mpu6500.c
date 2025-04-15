@@ -47,19 +47,23 @@ void mpu_init(I2C_HandleTypeDef *hi2c) {
 	uint32_t timeout = 100; // 100ms
 
 	// check device connection
-	HAL_StatusTypeDef connectStatus = HAL_I2C_IsDeviceReady(hi2c, MPUADDR, 1, timeout);
+	HAL_StatusTypeDef connectStatus = HAL_I2C_IsDeviceReady(hi2c, MPUADDR, 3, timeout);
 	if (connectStatus == HAL_OK) {
+		serialPrint("Connecting to MPU...HAL_OK.\r\n");
 		// verify MPU connection
 		uint8_t whoami = 0x00;
 		mpu_reg_read(MPUREG_WHOAMI, &whoami, 1, timeout);
 		if (whoami == 0x70) {
 			// success: do smt
+			serialPrint("Reading MPU...whoami verified.\r\n");
 		} else {
 			// failed: do smt
+			serialPrint("Reading MPU...whoami failed, exiting MPU_INIT.\r\n");
 			return;
 		}
 	} else {
 		// do smt
+		serialPrint("Connecting to MPU...failed, exiting MPU_INIT.\r\n");
 		return;
 	}
 

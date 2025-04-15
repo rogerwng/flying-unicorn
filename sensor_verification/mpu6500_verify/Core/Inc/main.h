@@ -32,7 +32,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "mpu6500.h"
-//#include <stdio.h>
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -42,7 +43,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern UART_HandleTypeDef* serial_huart;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -52,6 +53,11 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+
+/**	Set global UART handle for UART prints */
+void setSerialHUART(UART_HandleTypeDef* huart);
+/** Print using UART	*/
+void serialPrint(char* str);
 
 /* USER CODE BEGIN EFP */
 

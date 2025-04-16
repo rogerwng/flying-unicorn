@@ -10,3 +10,6 @@
 
 /** Initialize NEO8M via UART */
 void neo8m_init(UART_HandleTypeDef* huart);
+
+/** Read a line of NEO8M data in blocking mode */
+void neo8m_readLine(char* buff, uint32_t buffSize);

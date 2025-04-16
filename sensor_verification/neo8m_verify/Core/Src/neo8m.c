@@ -65,3 +65,42 @@ void neo8m_init(UART_HandleTypeDef* huart) {
 		HAL_Delay(100);
 	}
 }
+
+/**	Reading Single Line of NEO-8M data in blocking mode
+ * 	INPUTS:
+ * 		buff - pointer to string buffer
+ * 		buffSize - size of buffer
+ */
+void neo8m_readLine(char* buff, uint32_t buffSize) {
+	uint8_t rawBuff[128]; // buffer to store incoming chars
+	uint8_t rxd; // read chars one at a time, store in raw buff
+	uint8_t idx = 0; // keep track of current write-index in buffer
+	uint8_t reading = 0; // set to true if we are reading sentence
+
+	while (HAL_UART_Receive(myhuart, &rxd, 1, HAL_MAX_DELAY) == HAL_OK) { // continuously reads a byte of data while connection is good
+		if (rxd == '$') { // we have read the sentence start
+			rawBuff[0] = rxd;
+			idx = 1;
+			reading = 1;
+			continue;
+		} else if (reading == 1 && rxd == '\n') { // we have read end of sentence
+			rawBuff[idx] = rxd;
+			idx++;
+			break;
+		} else if (reading == 1) { // read sentence start, havent read end
+			rawBuff[idx] = rxd;
+			idx++;
+			continue;
+		}
+	}
+
+	// copy sentence to buffer
+	if (idx > buffSize) {
+		serialPrint("neo8m_readLine() error: length of sentence longer than buffer. Returning.\r\n");
+		return;
+	}
+
+	for (int i = 0; i < idx; i++) {
+		buff[i] = (char)rawBuff[i];
+	}
+}

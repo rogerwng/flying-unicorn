@@ -31,7 +31,11 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "gy273.h"
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+#include <float.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -41,7 +45,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern UART_HandleTypeDef* serial_huart;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -53,6 +57,11 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+
+/**	Set global UART handle for UART prints */
+void setSerialHUART(UART_HandleTypeDef* huart);
+/** Print using UART	*/
+void serialPrint(char* str);
 
 /* USER CODE END EFP */
 

@@ -11,6 +11,8 @@
 /* Initializing the sensor */
 void gy_init(I2C_HandleTypeDef *hi2c);
 
+/** Calibrating sensor */
+void gy_calibrateBias();
+
 /* Reading data converted to real units */
 void gy_readData(float* pMagBuffer);
-

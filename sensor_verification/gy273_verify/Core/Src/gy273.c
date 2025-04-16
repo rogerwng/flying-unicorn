@@ -20,6 +20,10 @@
 #define GYCONVERSION_LSBTOG 1090.0f // for 1.3 Ga gain, the LSB/Gauss is 1090
 #define GYCONVERSION_GTOuT 100.0f // conversion constant from Gauss to microTesla
 
+// bias
+float gyBias[3] = {0.0, 0.0, 0.0};
+float gyScale[3] = {1.0, 1.0, 1.0};
+
 I2C_HandleTypeDef* myhi2c;
 
 /** Writing to registers */
@@ -43,17 +47,21 @@ void gy_init(I2C_HandleTypeDef* hi2c) {
 	// check device status
 	HAL_StatusTypeDef connectStatus = HAL_I2C_IsDeviceReady(hi2c, GYADDR, 1, timeout);
 	if (connectStatus == HAL_OK) {
+		serialPrint("Connecting to GY...HAL_OK.\r\n");
 		// read whoami
 		uint8_t whoami;
 		gy_reg_read(GYREG_WHOAMI, &whoami, 1, timeout);
 		if (whoami == 0x48) {
 			// connected!, do smt
+			serialPrint("Connecting to GY...whoami verified.\r\n");
 		} else {
 			// invalid, do smt
+			serialPrint("Connecting to GY...whoami failed, exiting GY_INIT.\r\n");
 			return;
 		}
 	} else {
 		// do smt
+		serialPrint("Connecting to GY...failed, exiting GY_INIT.\r\n");
 		return;
 	}
 
@@ -87,9 +95,9 @@ static void gy_readRawData(uint16_t* pBuff) {
  * 		pRawBuffer - pointer to uint16 array where raw data stored
  * */
 static void gy_convertRawData(float* pMagBuffer, uint16_t* pRawBuffer) {
-	pMagBuffer[0] = (float)(int16_t)pRawBuffer[0] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT;
-	pMagBuffer[1] = (float)(int16_t)pRawBuffer[1] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT;
-	pMagBuffer[2] = (float)(int16_t)pRawBuffer[2] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT;
+	pMagBuffer[0] = ((float)(int16_t)pRawBuffer[0] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT - gyBias[0]) * gyScale[0];
+	pMagBuffer[1] = ((float)(int16_t)pRawBuffer[1] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT - gyBias[1]) * gyScale[1];
+	pMagBuffer[2] = ((float)(int16_t)pRawBuffer[2] / GYCONVERSION_LSBTOG * GYCONVERSION_GTOuT - gyBias[2]) * gyScale[2];
 }
 
 /**	Reading data in float (uT)
@@ -101,4 +109,48 @@ void gy_readData(float* pMagBuffer) {
 	gy_readRawData(rawBuffer);
 
 	gy_convertRawData(pMagBuffer, rawBuffer);
+}
+
+/**	Calibrating magnetometer
+ */
+void gy_calibrateBias() {
+	serialPrint("Calibrating GY...collecting measurements.\r\n");
+
+	// collect data from all orientations, just store min and max readings along each axis
+	uint32_t totalCalibTime = 5000; // 5 sec for full orientation
+	uint32_t delay = 50; // 50 ms between each reading
+	uint32_t numReadings = totalCalibTime / delay;
+
+	float mag[3];
+	float mins[3] = {FLT_MAX, FLT_MAX, FLT_MAX};
+	float maxs[3] = {FLT_MIN, FLT_MIN, FLT_MIN};
+	for (int i = 0; i < numReadings + 3; i++) { // ignore first 3 readings -> 3*delay warmup time
+		HAL_Delay(delay);
+		gy_readData(mag);
+		if (i < 3) { continue; };
+
+		for (int j = 0; j < 3; j++) {
+			mins[j] = fminf(mins[j], mag[j]);
+			maxs[j] = fmaxf(maxs[j], mag[j]);
+		}
+	}
+
+	float avgScale = 0.0;
+	for (int i = 0; i < 3; i++) {
+		// hard iron offset
+		gyBias[i] = (maxs[i] + mins[i]) / 2.0;
+
+		// soft iron scaling
+		gyScale[i] = (maxs[i] - mins[i]) / 2.0;
+		avgScale += gyScale[i] / 3.0;
+	}
+
+	// final soft iron scale
+	gyScale[0] = avgScale / gyScale[0];
+	gyScale[1] = avgScale / gyScale[1];
+	gyScale[2] = avgScale / gyScale[2];
+
+	char buff[128];
+	snprintf(buff, sizeof(buff), "Computed offset: X=%.3f, Y=%.3f, Z=%.3f, scaling factor: X=%.3f, Y=%.3f, Z=%.3f\r\n", gyBias[0], gyBias[1], gyBias[2], gyScale[0], gyScale[1], gyScale[2]);
+	serialPrint(buff);
 }

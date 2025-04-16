@@ -112,7 +112,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
 	  //serialPrint("Hello World!\r\n");
 	  //HAL_Delay(1000)/;
 	  float acc[3];
@@ -123,6 +122,8 @@ int main(void)
 	  snprintf(buffer, sizeof(buffer), "Acc: X=%.3f, Y=%.3f, Z=%.3f, Gyro: X=%.3f, Y=%.3f, Z=%.3f\r\n", acc[0], acc[1], acc[2], gyro[0], gyro[1], gyro[2]);
 	  serialPrint(buffer);
 	  HAL_Delay(500);
+    /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

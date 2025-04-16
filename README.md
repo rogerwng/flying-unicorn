@@ -1,4 +1,4 @@
-# Drone Flight Software for my custom autonomous drone project  
+# Drone Flight Software for a Custom Autonomous Drone  
 A very much in-progress project. 
 
 Avionics stack: 
@@ -10,4 +10,5 @@ Avionics stack:
 - NRF24 Radio 
 - NEO-8M GPS    
 
+## File Overview    
 */sensor_verification* - low-level drivers and testing code 

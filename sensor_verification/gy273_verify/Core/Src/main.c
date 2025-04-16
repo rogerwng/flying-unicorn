@@ -105,8 +105,6 @@ int main(void)
   setSerialHUART(&huart2);
   serialPrint("Initializing GY.\r\n");
   gy_init(&hi2c2);
-  float magBuff[3];
-  gy_readData(magBuff);
 
   /* USER CODE END 2 */
 
@@ -114,6 +112,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  char buff[128];
+	  float magBuff[3];
+	  gy_readData(magBuff);
+
+	  snprintf(buff, sizeof(buff), "X=%.3f, Y=%.3f, Z=%.3f\r\n", magBuff[0], magBuff[1], magBuff[2]);
+	  serialPrint(buff);
+
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

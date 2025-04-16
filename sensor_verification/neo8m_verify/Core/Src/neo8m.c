@@ -83,6 +83,11 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 			idx = 1;
 			reading = 1;
 			continue;
+		} else if (reading == 1 && idx >= sizeof(rawBuff)) {
+			// error in sentence reading, restart
+			idx = 0;
+			reading = 0;
+			continue;
 		} else if (reading == 1 && rxd == '\n') { // we have read end of sentence
 			rawBuff[idx] = rxd;
 			idx++;

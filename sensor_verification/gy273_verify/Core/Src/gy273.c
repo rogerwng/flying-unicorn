@@ -145,7 +145,7 @@ void gy_calibrateBias() {
 		avgScale += gyScale[i] / 3.0;
 	}
 
-	// final soft iron scale
+	// final soft iron scale: this formula simplifies the full matrix calibration by only considering diagonals (axis-wise scaling) and not rotations
 	gyScale[0] = avgScale / gyScale[0];
 	gyScale[1] = avgScale / gyScale[1];
 	gyScale[2] = avgScale / gyScale[2];

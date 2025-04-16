@@ -11,4 +11,4 @@ Avionics stack:
 - NEO-8M GPS    
 
 ## File Overview    
-*/sensor_verification* - low-level drivers and testing code 
+*/sensor_verification* - implementing low-level drivers and testing code 

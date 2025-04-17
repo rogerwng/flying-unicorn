@@ -3,14 +3,14 @@
   * @file           : gy273.c
   * @brief          : GY273 Interface
   *                   This file contains the functions used to configure and
-  *                   read data from GY273.
+  *                   read data from GY273 using QMC chip.
   ******************************************************************************
   */
 
-#include "gy273.h"
+#include <gy273.h>
 
 // private defines
-#define GYADDR (0x1E << 1)
+#define GYADDR (0x0D << 1)
 #define GYREG_WHOAMI 0x10 // ID reg A
 #define GYREG_CONFIGA 0x00
 #define GYREG_CONFIGB 0x01
@@ -41,6 +41,8 @@ static void gy_reg_read(uint8_t reg, uint8_t* pBuff, uint16_t nBytes, uint32_t t
  * 		hi2c - pointer to i2c handle
  * */
 void gy_init(I2C_HandleTypeDef* hi2c) {
+	HAL_Delay(300);
+
 	myhi2c = hi2c;
 	uint32_t timeout = 100;
 

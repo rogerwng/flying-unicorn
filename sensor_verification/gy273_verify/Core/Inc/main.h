@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "gy273.h"
+#include <gy273.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>

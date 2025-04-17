@@ -112,7 +112,7 @@ int main(void)
   while (1)
   {
 	  float altitude;
-	  bmp_readData(&altitude);
+	  bmp_readDataRelative(&altitude);
 	  char buff[128];
 	  snprintf(buff, sizeof(buff), "H=%.2f\r\n", altitude);
 	  serialPrint(buff);

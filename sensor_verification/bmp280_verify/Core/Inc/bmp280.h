@@ -14,3 +14,6 @@ void bmp_init(I2C_HandleTypeDef *hi2c);
 
 /* Reading data converted to real units */
 void bmp_readData(float* pAlt);
+
+/**	Reading final relative altitude measurement from BMP */
+void bmp_readDataRelative(float* pAlt);

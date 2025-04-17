@@ -11,13 +11,11 @@
 
 // private defines
 #define GYADDR (0x0D << 1)
-#define GYREG_WHOAMI 0x10 // ID reg A
-#define GYREG_CONFIGA 0x00
-#define GYREG_CONFIGB 0x01
-#define GYREG_MODE 0x02
-#define GYREG_DATAOUTPUTX 0x03 // output regs from 0x03-0x08 (6 regs MSB+LSB alternating for 3x16-bit 2's comp integers)
+#define GYREG_WHOAMI 0x0D // ID reg A
+#define GYREG_CONFIG1 0x09
+#define GYREG_DATAOUTPUTX 0x00 // output regs from 0x00-0x05 (6 regs LSB+MSB alternating for 3x16-bit 2's comp integers)
 
-#define GYCONVERSION_LSBTOG 1090.0f // for 1.3 Ga gain, the LSB/Gauss is 1090
+#define GYCONVERSION_LSBTOG 12000.0f // for +-2G full scale range, LSB/Gauss = 12000
 #define GYCONVERSION_GTOuT 100.0f // conversion constant from Gauss to microTesla
 
 // bias
@@ -53,7 +51,7 @@ void gy_init(I2C_HandleTypeDef* hi2c) {
 		// read whoami
 		uint8_t whoami;
 		gy_reg_read(GYREG_WHOAMI, &whoami, 1, timeout);
-		if (whoami == 0x48) {
+		if (whoami == 0xFF) {
 			// connected!, do smt
 			serialPrint("Connecting to GY...whoami verified.\r\n");
 		} else {
@@ -69,12 +67,8 @@ void gy_init(I2C_HandleTypeDef* hi2c) {
 
 	/** CONFIGURE GY */
 
-	// CONFIGA: 0b 0 [reserved] 11 [8 avg samples per output] 110 [75 Hz sample rate] 00 [normal measurement config] -> 0x78
-	gy_reg_write(GYREG_CONFIGA, 0x78, timeout);
-	// CONFIGB: 0b 001 [gain of 1.3Ga (default)] 00000 -> 0x20
-	gy_reg_write(GYREG_CONFIGB, 0x20, timeout);
-	// MODE: 0b 000000 [disable hi-speed i2c since we are using fast] 00 [continuous measurement mode] -> 0x00
-	gy_reg_write(GYREG_MODE, 0x00, timeout);
+	// CONFIG 1: 01 [256 OSR] 00 [2G FSR] 01 [50Hz] 01 [continuous mode] -> 0x45
+	gy_reg_write(GYREG_CONFIG1, 0x45, timeout);
 }
 
 /**	READING RAW DATA
@@ -86,9 +80,9 @@ static void gy_readRawData(uint16_t* pBuff) {
 	uint8_t rawBuff[6];
 	gy_reg_read(GYREG_DATAOUTPUTX, rawBuff, 6, timeout);
 
-	pBuff[0] = ((uint16_t)rawBuff[0] << 8) | (uint16_t)rawBuff[1];
-	pBuff[1] = ((uint16_t)rawBuff[2] << 8) | (uint16_t)rawBuff[3];
-	pBuff[2] = ((uint16_t)rawBuff[4] << 8) | (uint16_t)rawBuff[5];
+	pBuff[0] = ((uint16_t)rawBuff[1] << 8) | (uint16_t)rawBuff[0];
+	pBuff[1] = ((uint16_t)rawBuff[3] << 8) | (uint16_t)rawBuff[2];
+	pBuff[2] = ((uint16_t)rawBuff[5] << 8) | (uint16_t)rawBuff[4];
 }
 
 /**	Converting raw outputs to real units
@@ -125,7 +119,7 @@ void gy_calibrateBias() {
 
 	float mag[3];
 	float mins[3] = {FLT_MAX, FLT_MAX, FLT_MAX};
-	float maxs[3] = {FLT_MIN, FLT_MIN, FLT_MIN};
+	float maxs[3] = {-FLT_MAX, -FLT_MAX, -FLT_MAX};
 	for (int i = 0; i < numReadings + 3; i++) { // ignore first 3 readings -> 3*delay warmup time
 		HAL_Delay(delay);
 		gy_readData(mag);

@@ -34,6 +34,7 @@ extern "C" {
 #include "neo8m.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

@@ -83,7 +83,7 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 			idx = 1;
 			reading = 1;
 			continue;
-		} else if (reading == 1 && idx >= sizeof(rawBuff)) {
+		} else if (reading == 1 && idx >= sizeof(rawBuff) - 1) {
 			// error in sentence reading, restart
 			idx = 0;
 			reading = 0;
@@ -100,7 +100,7 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 	}
 
 	// copy sentence to buffer
-	if (idx > buffSize) {
+	if (idx >= buffSize) {
 		serialPrint("neo8m_readLine() error: length of sentence longer than buffer. Returning.\r\n");
 		return;
 	}
@@ -108,6 +108,8 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 	for (int i = 0; i < idx; i++) {
 		buff[i] = (char)rawBuff[i];
 	}
+	// add null terminator
+	buff[idx] = '\0';
 }
 
 /**	Parsing a GGA sentence
@@ -116,9 +118,9 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
  * 		buffSize - length of buffer
  * 		gpsBuff - pointer to float array where data will be stored
  * 	OUTPUT:
- * 		uint8_t status - 1 if valid line, 0 otherwise
+ * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
  * */
-uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
+uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	// check GGA sentence
 	if (strncmp(buff, "$GPGGA", 6) != 0 && strncmp(buff, "$GNGGA", 6) != 0) {
 		serialPrint("Parsing sentence error...not GGA, exiting.\r\n");
@@ -126,7 +128,8 @@ uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	}
 
 	// valid GGA sentence, iterate thru characters starting from idx = 6, which should be comma
-	float latitude, longitude, altitude;
+	float latitude = 0.0, longitude = 0.0, altitude = 0.0;
+	int sat_check = 1; // true if good num sats
 
 	int term_counter = 0;
 	int term_idx = 0;
@@ -134,7 +137,7 @@ uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	for (int i = 6; i < buffSize; i++) {
 		if (buff[i] == ',') {
 			term[term_idx] = '\0';
-			// start of new term, check last term - term 1 (time), term 2 (latitude), term 3 (N/S), term 4 (logitude), term 5 (E/W), term 6 (fix quality), term 7 (num satelites), term 9 (altitude)
+			// start of new term, check last term - term 1 (time), term 2 (latitude), term 3 (N/S), term 4 (longitude), term 5 (E/W), term 6 (fix quality), term 7 (num satelites), term 9 (altitude)
 			if (term_counter == 2) {
 				float rawLatitude = atof(term);
 				latitude = (int)(rawLatitude / 100);
@@ -158,8 +161,8 @@ uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 				return 0;
 			} else if (term_counter == 7 && atof(term) < 5) {
 				// check if num satelites above threshold
-				serialPrint("Parsing sentence error...too small number of satelites, exiting.\r\n");
-				return 0;
+				serialPrint("Parsing sentence warning...too little number of satelites.\r\n");
+				sat_check = 0;
 			}
 			term_counter++;
 			term_idx = 0;
@@ -177,9 +180,26 @@ uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	gpsBuff[0] = latitude;
 	gpsBuff[1] = longitude;
 	gpsBuff[2] = altitude;
-	return 1;
+	if (sat_check) {
+		return 2;
+	} else {
+		return 1;
+	}
 }
 
+/**	Reading a line of valid data output in blocking mode
+ * 	INPUT:
+ * 		gpsData - pointer to float array where lat,long, and alt data will be stored
+ * */
+void neo8m_readData(float* gpsData) {
+	char buff[128];
+	neo8m_readLine(buff, 128);
+	while (neo8m_parseSentence(buff, 128, gpsData) != 2) {
+		// keep trying new sentences
+		HAL_Delay(50);
+		neo8m_readLine(buff, 128);
+	}
 
+}
 
 

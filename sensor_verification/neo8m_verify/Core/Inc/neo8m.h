@@ -13,3 +13,10 @@ void neo8m_init(UART_HandleTypeDef* huart);
 
 /** Read a line of NEO8M data in blocking mode */
 void neo8m_readLine(char* buff, uint32_t buffSize);
+
+
+/**	Parsing a GGA sentence */
+uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff);
+
+/**	Reading a line of valid dataoutput in blocking mode */
+void neo8m_readData(float* gpsData);

@@ -110,6 +110,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  float gpsData[3];
+	  neo8m_readData(gpsData);
+
+	  char outputBuff[64];
+	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f, Alt=%.3f\r\n", gpsData[0], gpsData[1], gpsData[2]);
+	  serialPrint(outputBuff);
+
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

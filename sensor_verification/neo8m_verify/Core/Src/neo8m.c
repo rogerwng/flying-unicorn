@@ -9,7 +9,7 @@
 
 #include "neo8m.h"
 
-UART_HandleTypeDef* myhuart;
+static UART_HandleTypeDef* myhuart;
 
 /**	Helper function to compute checksums of NMEA commands
  * 	INPUT:
@@ -109,3 +109,77 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 		buff[i] = (char)rawBuff[i];
 	}
 }
+
+/**	Parsing a GGA sentence
+ * 	INPUT:
+ * 		buff - pointer to string containing sentence, $ expected at index 0
+ * 		buffSize - length of buffer
+ * 		gpsBuff - pointer to float array where data will be stored
+ * 	OUTPUT:
+ * 		uint8_t status - 1 if valid line, 0 otherwise
+ * */
+uint8_t parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
+	// check GGA sentence
+	if (strncmp(buff, "$GPGGA", 6) != 0 && strncmp(buff, "$GNGGA", 6) != 0) {
+		serialPrint("Parsing sentence error...not GGA, exiting.\r\n");
+		return 0;
+	}
+
+	// valid GGA sentence, iterate thru characters starting from idx = 6, which should be comma
+	float latitude, longitude, altitude;
+
+	int term_counter = 0;
+	int term_idx = 0;
+	char term[16];
+	for (int i = 6; i < buffSize; i++) {
+		if (buff[i] == ',') {
+			term[term_idx] = '\0';
+			// start of new term, check last term - term 1 (time), term 2 (latitude), term 3 (N/S), term 4 (logitude), term 5 (E/W), term 6 (fix quality), term 7 (num satelites), term 9 (altitude)
+			if (term_counter == 2) {
+				float rawLatitude = atof(term);
+				latitude = (int)(rawLatitude / 100);
+				latitude += (rawLatitude - latitude * 100) / 60.0f;
+			} else if (term_counter == 4) {
+				float rawLongitude = atof(term);
+				longitude = (int)(rawLongitude / 100);
+				longitude += (rawLongitude - longitude * 100) / 60.0f;
+			} else if (term_counter == 9) {
+				altitude = atof(term);
+				break; // no more useful terms after altitude
+			} else if (term_counter == 3 && term[0] == 'S') {
+				// flip latitude sign
+				latitude *= -1;
+			} else if (term_counter == 5 && term[0] == 'W') {
+				// flip longitude sign
+				longitude *= -1;
+			} else if (term_counter == 6 && term[0] == '0' ) {
+				// fix quality invalid
+				serialPrint("Parsing sentence error...invalid fix quality, exiting.\r\n");
+				return 0;
+			} else if (term_counter == 7 && atof(term) < 5) {
+				// check if num satelites above threshold
+				serialPrint("Parsing sentence error...too small number of satelites, exiting.\r\n");
+				return 0;
+			}
+			term_counter++;
+			term_idx = 0;
+			continue;
+		}
+
+		// no new term, write to term buffer
+		if (term_idx < 15) {
+			term[term_idx] = buff[i];
+			term_idx++;
+		}
+	}
+
+	// successful read, update buffers
+	gpsBuff[0] = latitude;
+	gpsBuff[1] = longitude;
+	gpsBuff[2] = altitude;
+	return 1;
+}
+
+
+
+

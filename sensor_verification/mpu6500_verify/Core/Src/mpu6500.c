@@ -26,11 +26,11 @@
 #define ACCDATA_SCALE_FACTOR (8.0f * 9.81f / 32768.0f)  // for 8g full-scale, converted to m/s²
 #define GYRODATA_SCALE_FACTOR (2000.0f / 32768.0f)  // for 2000 dps range, converted to degrees/second
 
-I2C_HandleTypeDef* myhi2c;
+static I2C_HandleTypeDef* myhi2c;
 
 // calibration offsets
-float accBias[3] = {0.0, 0.0, 0.0};
-float gyroBias[3] = {0.0, 0.0, 0.0};
+static float accBias[3] = {0.0, 0.0, 0.0};
+static float gyroBias[3] = {0.0, 0.0, 0.0};
 
 /* Writing to registers */
 static void mpu_reg_write(uint8_t reg, uint8_t value, uint32_t timeout) {

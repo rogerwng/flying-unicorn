@@ -19,10 +19,10 @@
 #define GYCONVERSION_GTOuT 100.0f // conversion constant from Gauss to microTesla
 
 // bias
-float gyBias[3] = {0.0, 0.0, 0.0};
-float gyScale[3] = {1.0, 1.0, 1.0};
+static float gyBias[3] = {0.0, 0.0, 0.0};
+static float gyScale[3] = {1.0, 1.0, 1.0};
 
-I2C_HandleTypeDef* myhi2c;
+static I2C_HandleTypeDef* myhi2c;
 
 /** Writing to registers */
 static void gy_reg_write(uint8_t reg, uint8_t value, uint32_t timeout) {

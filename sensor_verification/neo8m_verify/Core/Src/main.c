@@ -45,6 +45,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 UART_HandleTypeDef* serial_huart = NULL;
+uint8_t gpsByte;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +66,14 @@ void setSerialHUART(UART_HandleTypeDef* huart) { serial_huart = huart; };
 void serialPrint(char* str) {
 	HAL_UART_Transmit(serial_huart, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
 };
+
+/** UART Interupt Function */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (huart == &huart2) {
+		neo8m_readByte_IT(gpsByte);
+		HAL_UART_Receive_IT(huart, &gpsByte, 1);
+	}
+}
 
 /* USER CODE END 0 */
 

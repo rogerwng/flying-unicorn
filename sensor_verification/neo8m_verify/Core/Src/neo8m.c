@@ -11,6 +11,18 @@
 
 static UART_HandleTypeDef* myhuart;
 
+// receive incoming interrupt data in circular buffer
+#define GPS_BUFFER_LEN 256
+#define GPS_TEMP_BUFFER_LEN 64
+volatile static uint8_t gpsBuffer[GPS_BUFFER_LEN];
+volatile static uint16_t gpsBufferWrite = 0;
+volatile static uint16_t gpsBufferRead = 0;
+volatile static uint8_t sentenceReadyFlag = 0;
+// temp buffer to store single sentence
+static char sentenceBuffer[GPS_TEMP_BUFFER_LEN];
+// latest data information
+static float gpsData[3];
+
 /**	Helper function to compute checksums of NMEA commands
  * 	INPUT:
  * 		cmd - a string (array of chars so its a pointer)
@@ -27,6 +39,39 @@ static uint8_t computeChecksum(char* cmd) {
 		cmd++;
 	}
 	return checksum;
+}
+
+/**	Validate the checksum for a given sentence stored in a buffer
+ * 	INPUT:
+ * 		buff - buffer containing sentence, expected buff[0] == '$'
+ * 		buffSize - size of buffer
+ * 	OUTPUT:
+ * 		0 or 1 if checksum valid
+ * */
+static uint8_t validateChecksum(char* buff, uint32_t buffSize) {
+	// extract checksum from sentence
+	uint16_t checksumIDX = 0; // store start of checksum
+	for (int i = 0; i < buffSize; i++) {
+		if (buff[i] == '*') {
+			checksumIDX = i + 1;
+			break;
+		}
+	}
+	// check checksum out of bounds or no * found in sentence
+	if (checksumIDX + 1 >= buffSize || checksumIDX == 0) {
+		return 0;
+	}
+
+	// extract checksum, compare it
+	char sentenceChecksum[3] = {buff[checksumIDX], buff[checksumIDX + 1], '\0'};
+	uint8_t checksum = (uint8_t)strtol(sentenceChecksum, NULL, 16);
+	uint8_t computedChecksum = computeChecksum(buff);
+
+	if (checksum == computedChecksum) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 /** INITIALIZTING NEO8M
@@ -123,7 +168,12 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	// check GGA sentence
 	if (strncmp(buff, "$GPGGA", 6) != 0 && strncmp(buff, "$GNGGA", 6) != 0) {
-		serialPrint("Parsing sentence error...not GGA, exiting.\r\n");
+		serialPrint("neo8m_parseSentence: Parsing sentence error...not GGA, exiting.\r\n");
+		return 0;
+	}
+	// validate checksum
+	if (validateChecksum(buff, buffSize) == 0) {
+		serialPrint("neo8m_parseSentence: Parsing sentence error...invalid checksum, exiting.\r\n");
 		return 0;
 	}
 
@@ -181,7 +231,7 @@ uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	gpsBuff[1] = longitude;
 	gpsBuff[2] = altitude;
 	if (sat_check) {
-		return 2;
+		return 2;  // sat check good, valid data
 	} else {
 		return 1;
 	}
@@ -189,12 +239,12 @@ uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 
 /**	Reading a line of valid data output in blocking mode
  * 	INPUT:
- * 		gpsData - pointer to float array where lat,long, and alt data will be stored
+ * 		gpsData - pointer to float array where lat, long, and alt data will be stored
  * */
-void neo8m_readData(float* gpsData) {
+void neo8m_readData(float* gpsDataBuff) {
 	char buff[128];
 	neo8m_readLine(buff, 128);
-	while (neo8m_parseSentence(buff, 128, gpsData) != 2) {
+	while (neo8m_parseSentence(buff, 128, gpsDataBuff) != 2) {
 		// keep trying new sentences
 		HAL_Delay(50);
 		neo8m_readLine(buff, 128);
@@ -202,4 +252,89 @@ void neo8m_readData(float* gpsData) {
 
 }
 
+/**	Read a byte of data via interupt and store in buffer
+ * 	INPUT:
+ * 		byte - a byte of incoming data
+ * */
+void neo8m_readByte_IT(uint8_t byte) {
+	// protecting against read/write collisions
+	if ((gpsBufferWrite + 1) % GPS_BUFFER_LEN == gpsBufferRead) {
+		serialPrint("neo8m_readByte_IT(), gpsBuffer overflow, exiting.\r\n");
+		return;
+	}
+
+	gpsBuffer[gpsBufferWrite] = byte;
+	gpsBufferWrite = (gpsBufferWrite + 1) % GPS_BUFFER_LEN;
+
+	// if byte is newline character - '\n', then raise flag -> main loop reads flag and processes sentence
+	if (byte == '\n') {
+		__disable_irq();
+		sentenceReadyFlag = 1;
+		__enable_irq();
+	}
+}
+
+/** Read a sentence from buffer and store in temp buffer, then parse sentence and update state data
+ * */
+void neo8m_processSentence_IT() {
+	uint16_t sentenceBufferIDX = 0;
+	while (gpsBuffer[gpsBufferRead] != '\n') {
+		// read/write collision
+		if (gpsBufferRead == gpsBufferWrite) {
+			serialPrint("neo8m_processSentence_IT(): gpsBuffer read collision, exiting.\r\n");
+			sentenceBufferIDX = 0;
+			return;
+		}
+
+		sentenceBuffer[sentenceBufferIDX++] = gpsBuffer[gpsBufferRead];
+		gpsBufferRead = (gpsBufferRead + 1) % GPS_BUFFER_LEN;
+
+		if (sentenceBufferIDX >= GPS_TEMP_BUFFER_LEN) {
+			sentenceBufferIDX = 0;
+			serialPrint("neo8m_readSentence_IT(): sentenceBuffer overflow, exiting.\r\n");
+			return;
+		}
+	}
+
+	sentenceBuffer[sentenceBufferIDX++] = '\n';
+	sentenceBuffer[sentenceBufferIDX] = '\0';
+	sentenceBufferIDX = 0;
+	float gpsDataBuff[3];
+	neo8m_parseSentence(sentenceBuffer, GPS_TEMP_BUFFER_LEN, gpsDataBuff);
+	// update gpsData - avoid race
+	__disable_irq();
+	gpsData[0] = gpsDataBuff[0];
+	gpsData[1] = gpsDataBuff[1];
+	gpsData[2] = gpsDataBuff[2];
+	__enable_irq();
+}
+
+/**	Reading a line of data saved internally, updated in interrupt routine
+ * 	INPUT:
+ * 		external_gpsDataBuff - pointer to float array where lat, long, and alt data will be stored
+ * */
+void neo8m_readData_IT(float* external_gpsDataBuff) {
+	// avoid race when we are reading gpsData while trying to update it
+	__disable_irq();
+	external_gpsDataBuff[0] = gpsData[0];
+	external_gpsDataBuff[1] = gpsData[1];
+	external_gpsDataBuff[2] = gpsData[2];
+	__enable_irq();
+}
+
+/** Check if sentence flag ready
+ * 	OUTPUT:
+ * 		0 or 1
+ * */
+uint8_t neo8m_isSentenceReady_IT() {
+	if (sentenceReadyFlag) {
+		__disable_irq();
+		sentenceReadyFlag = 0;
+		__enable_irq();
+
+		return 1;
+	} else {
+		return 0;
+	}
+}
 

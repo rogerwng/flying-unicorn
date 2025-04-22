@@ -19,4 +19,18 @@ void neo8m_readLine(char* buff, uint32_t buffSize);
 uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff);
 
 /**	Reading a line of valid dataoutput in blocking mode */
-void neo8m_readData(float* gpsData);
+void neo8m_readData(float* gpsDataBuff);
+
+/**	INTERUPT INTERFACE */
+
+/** Read byte of data through interupt */
+void neo8m_readByte_IT(uint8_t byte);
+
+/** Once full sentence received in interupt handler (detects '\n'), parse sentence */
+void neo8m_processSentence_IT();
+
+/** Reading GPS data that is updated through interupt */
+void neo8m_readData_IT(float* external_gpsDataBuff);
+
+/** Check if sentence flag ready */
+uint8_t neo8m_isSentenceReady_IT();

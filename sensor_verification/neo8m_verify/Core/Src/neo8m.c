@@ -252,6 +252,13 @@ void neo8m_readData(float* gpsDataBuff) {
 
 }
 
+
+/****************************************************************************/
+
+
+
+
+
 /**	Read a byte of data via interupt and store in buffer
  * 	INPUT:
  * 		byte - a byte of incoming data

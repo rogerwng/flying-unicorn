@@ -67,6 +67,12 @@ void serialPrint(char* str) {
 	HAL_UART_Transmit(serial_huart, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
 };
 
+/**	IC Interrupt Callback */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+	if (htim->Instance == TIM12) {
+		hcsr04_echo_IT();
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -103,7 +109,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   setSerialHUART(&huart2);
-
+  hcsr04_init(&htim12, TIM_CHANNEL_2, &GPIOB, GPIO_PIN_14);
   /* USER CODE END 2 */
 
   /* Infinite loop */

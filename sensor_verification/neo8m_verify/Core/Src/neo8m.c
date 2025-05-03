@@ -81,16 +81,18 @@ static uint8_t validateChecksum(char* buff, uint32_t buffSize) {
 void neo8m_init(UART_HandleTypeDef* huart) {
 	myhuart = huart;
 
+
 	/** Configuring output sentences */
 	// using nmea commands to configure gps output sentences
+	/*
 	char* nmea_commands[] = {
-			"$PUBX,40,GGA,1,0,0,0*00\r\n", // enables GGA on UART1
-			"$PUBX,40,GLL,0,0,0,0*00\r\n", // disables GLL
-			"$PUBX,40,GSA,0,0,0,0*00\r\n", // disables GSA
-			"$PUBX,40,GSV,0,0,0,0*00\r\n", // disables GSV
-			"$PUBX,40,RMC,0,0,0,0*00\r\n", // disables RMC
-			"$PUBX,40,VTG,0,0,0,0*00\r\n", // disables VTG
-			"$PUBX,40,TXT,0,0,0,0*00\r\n"  // disables TXT
+			"$PUBX,40,GGA,1,0,0,0*33\r\n", // enables GGA on UART1
+			"$PUBX,40,GLL,0,0,0,0*2F\r\n", // disables GLL
+			"$PUBX,40,GSA,0,0,0,0*3A\r\n", // disables GSA
+			"$PUBX,40,GSV,0,0,0,0*3B\r\n", // disables GSV
+			"$PUBX,40,RMC,0,0,0,0*2E\r\n", // disables RMC
+			"$PUBX,40,VTG,0,0,0,0*3F\r\n", // disables VTG
+			"$PUBX,40,TXT,0,0,0,0*34\r\n"  // disables TX
 	};
 
 	// need to calculate checksum of each sentence and add it into string
@@ -104,11 +106,13 @@ void neo8m_init(UART_HandleTypeDef* huart) {
 		nmea_commands[i][22] = checksumString[1];
 	}
 
+
 	// send the nmea commands over uart to configure neo8m
 	for (int i = 0; i < 7; i++) {
 		HAL_UART_Transmit(myhuart, (uint8_t*)nmea_commands[i], strlen(nmea_commands[i]), 100);
-		HAL_Delay(100);
+		HAL_Delay(500);
 	}
+	*/
 }
 
 /**	Reading Single Line of NEO-8M data in blocking mode
@@ -157,6 +161,33 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
 	buff[idx] = '\0';
 }
 
+/** Parse sentence prototypes */
+static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff);
+static uint8_t parseGLL(char* buff, uint32_t buffSize, float* gpsBuff);
+static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff);
+
+
+/** Parsing NMEA sentences */
+uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
+	// validate NMEA checksum
+	if (validateChecksum(buff, buffSize) == 0) {
+		serialPrint("neo8m_parseSentence: Parsing sentence error...invalid checksum, exiting.\r\n");
+		return 0;
+	}
+
+	// see what type of sentence we have
+	if (strncmp(buff, "$GPGGA", 6) == 0 || strncmp(buff, "$GNGGA", 6) == 0) {
+		return parseGGA(buff, buffSize, gpsBuff);
+	} else if (strncmp(buff, "$GPGLL", 6) == 0 || strncmp(buff, "$GNGLL", 6) == 0) {
+		return parseGLL(buff, buffSize, gpsBuff);
+	} else if (strncmp(buff, "$GPRMC", 6) == 0 || strncmp(buff, "$GNRMC", 6) == 0) {
+		return parseRMC(buff, buffSize, gpsBuff);
+	} else {
+		serialPrint("neo8m_parseSentence: unknown or irrelevant NMEA sentence...exiting.\r\n");
+		return 0;
+	}
+}
+
 /**	Parsing a GGA sentence
  * 	INPUT:
  * 		buff - pointer to string containing sentence, $ expected at index 0
@@ -165,75 +196,195 @@ void neo8m_readLine(char* buff, uint32_t buffSize) {
  * 	OUTPUT:
  * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
  * */
-uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
-	// check GGA sentence
-	if (strncmp(buff, "$GPGGA", 6) != 0 && strncmp(buff, "$GNGGA", 6) != 0) {
-		serialPrint("neo8m_parseSentence: Parsing sentence error...not GGA, exiting.\r\n");
-		return 0;
-	}
-	// validate checksum
-	if (validateChecksum(buff, buffSize) == 0) {
-		serialPrint("neo8m_parseSentence: Parsing sentence error...invalid checksum, exiting.\r\n");
-		return 0;
-	}
+static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
+	serialPrint("parseGGA sentence\r\n");
 
 	// valid GGA sentence, iterate thru characters starting from idx = 6, which should be comma
 	float latitude = 0.0, longitude = 0.0, altitude = 0.0;
 	int sat_check = 1; // true if good num sats
 
-	int term_counter = 0;
-	int term_idx = 0;
-	char term[16];
-	for (int i = 6; i < buffSize; i++) {
-		if (buff[i] == ',') {
-			term[term_idx] = '\0';
-			// start of new term, check last term - term 1 (time), term 2 (latitude), term 3 (N/S), term 4 (longitude), term 5 (E/W), term 6 (fix quality), term 7 (num satelites), term 9 (altitude)
-			if (term_counter == 2) {
-				float rawLatitude = atof(term);
-				latitude = (int)(rawLatitude / 100);
-				latitude += (rawLatitude - latitude * 100) / 60.0f;
-			} else if (term_counter == 4) {
-				float rawLongitude = atof(term);
-				longitude = (int)(rawLongitude / 100);
-				longitude += (rawLongitude - longitude * 100) / 60.0f;
-			} else if (term_counter == 9) {
-				altitude = atof(term);
-				break; // no more useful terms after altitude
-			} else if (term_counter == 3 && term[0] == 'S') {
-				// flip latitude sign
-				latitude *= -1;
-			} else if (term_counter == 5 && term[0] == 'W') {
-				// flip longitude sign
-				longitude *= -1;
-			} else if (term_counter == 6 && term[0] == '0' ) {
-				// fix quality invalid
-				serialPrint("Parsing sentence error...invalid fix quality, exiting.\r\n");
+	// using strtok_r
+	int tokenctr = 0;
+	char* tokenptr;
+	char* token = strtok_r(buff, ",", &tokenptr);
+	while (token != NULL) {
+		if (tokenctr == 2) {
+			if (token[0] == '\0') return 0;
+			// latitude
+			float rawLatitude = atof(token);
+			latitude = (int)(rawLatitude / 100.0f);
+			latitude += (rawLatitude - latitude * 100) / 60.0f;
+		} else if (tokenctr == 3) {
+			if (token[0] == '\0') return 0;
+			// N/S
+			if (token[0] == 'S') latitude *= -1;
+
+		} else if (tokenctr == 4) {
+			if (token[0] == '\0') return 0;
+			// longitude
+			float rawLongitude = atof(token);
+			longitude = (int)(rawLongitude / 100.0f);
+			longitude += (rawLongitude - longitude * 100) / 60.0f;
+		} else if (tokenctr == 5) {
+			if (token[0] == '\0') return 0;
+			// E/W
+			if (token[0] == 'W') longitude *= -1;
+
+		} else if (tokenctr == 6) {
+			// fix quality
+			if (token[0] == '\0' || token[0] == '0') {
+				serialPrint("parseGGA: invalid or missing fix quality...exiting.\r\n");
 				return 0;
-			} else if (term_counter == 7 && atof(term) < 5) {
-				// check if num satelites above threshold
-				serialPrint("Parsing sentence warning...too little number of satelites.\r\n");
-				sat_check = 0;
 			}
-			term_counter++;
-			term_idx = 0;
-			continue;
+		} else if (tokenctr == 7) {
+			if (token[0] == '\0') return 0;
+			// # sats
+			if (atof(token) < 5) sat_check = 0;
+		} else if (tokenctr == 9) {
+			if (token[0] == '\0') return 0;
+			// altitude
+			altitude = atof(token);
+			// done parsing
+			break;
 		}
 
-		// no new term, write to term buffer
-		if (term_idx < 15) {
-			term[term_idx] = buff[i];
-			term_idx++;
-		}
+		// increment token pointers
+		tokenctr++;
+		token = strtok_r(NULL, ",", &tokenptr);
 	}
 
-	// successful read, update buffers
-	gpsBuff[0] = latitude;
-	gpsBuff[1] = longitude;
-	gpsBuff[2] = altitude;
 	if (sat_check) {
-		return 2;  // sat check good, valid data
+		gpsBuff[0] = latitude;
+		gpsBuff[1] = longitude;
+		gpsBuff[2] = altitude;
+		return 2;
 	} else {
+		serialPrint("parseGGA: too little sats...exiting.\r\n");
 		return 1;
+	}
+}
+
+/**	Parsing a GLL sentence
+ * 	INPUT:
+ * 		buff - pointer to string containing sentence, $ expected at index 0
+ * 		buffSize - length of buffer
+ * 		gpsBuff - pointer to float array where data will be stored
+ * 	OUTPUT:
+ * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
+ * */
+static uint8_t parseGLL(char* buff, uint32_t buffSize, float* gpsBuff) {
+	serialPrint("parseGLL sentence\r\n");
+
+	float latitude = 0, longitude = 0;
+	int valid = 0;
+	// using strtok_r
+	int tokenctr = 0;
+	char* tokenptr;
+	char* token = strtok_r(buff, ",", &tokenptr);
+	while (token != NULL) {
+		if (tokenctr == 1) {
+			if (token[0] == '\0') return 0;
+			// latitude
+			float rawLatitude = atof(token);
+			latitude = (int)(rawLatitude / 100.0f);
+			latitude += (rawLatitude - latitude * 100) / 60.0f;
+		} else if (tokenctr == 2) {
+			if (token[0] == '\0') return 0;
+			// N/S
+			if (token[0] == 'S') latitude *= -1;
+
+		} else if (tokenctr == 3) {
+			if (token[0] == '\0') return 0;
+			// longitude
+			float rawLongitude = atof(token);
+			longitude = (int)(rawLongitude / 100);
+			longitude += (rawLongitude - longitude * 100) / 60.0f;
+		} else if (tokenctr == 4) {
+			if (token[0] == '\0') return 0;
+			// E/W
+			if (token[0] == 'W') longitude *= -1;
+
+		} else if (tokenctr == 6) {
+			if (token[0] == '\0') return 0;
+			// valid bit
+			if (token[0] == 'A') valid = 1;
+			// done parsing
+			break;
+		}
+
+		// increment token pointers
+		tokenctr++;
+		token = strtok_r(NULL, ",", &tokenptr);
+	}
+
+	if (valid) {
+		gpsBuff[0] = latitude;
+		gpsBuff[1] = longitude;
+		return 2;
+	} else {
+		serialPrint("parseGLL: invalid sentence...exiting.\r\n");
+		return 0;
+	}
+}
+
+/**	Parsing a RMC sentence
+ * 	INPUT:
+ * 		buff - pointer to string containing sentence, $ expected at index 0
+ * 		buffSize - length of buffer
+ * 		gpsBuff - pointer to float array where data will be stored
+ * 	OUTPUT:
+ * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
+ * */
+static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff) {
+	serialPrint("parseRMC sentence\r\n");
+
+	float latitude = 0, longitude = 0;
+	int valid = 0;
+	// using strtok_r
+	int tokenctr = 0;
+	char* tokenptr;
+	char* token = strtok_r(buff, ",", &tokenptr);
+	while (token != NULL) {
+		if (tokenctr == 2) {
+			if (token[0] == '\0') return 0;
+			// status
+			if (token[0] == 'A') valid = 1;
+		} else if (tokenctr == 3) {
+			if (token[0] == '\0') return 0;
+			// latitude
+			float rawLatitude = atof(token);
+			latitude = (int)(rawLatitude / 100.0f);
+			latitude += (rawLatitude - latitude * 100) / 60.0f;
+		} else if (tokenctr == 4) {
+			if (token[0] == '\0') return 0;
+			// N/S
+			if (token[0] == 'S') latitude *= -1;
+
+		} else if (tokenctr == 5) {
+			if (token[0] == '\0') return 0;
+			// longitude
+			float rawLongitude = atof(token);
+			longitude = (int)(rawLongitude / 100.0f);
+			longitude += (rawLongitude - longitude * 100) / 60.0f;
+		} else if (tokenctr == 6) {
+			if (token[0] == '\0') return 0;
+			// E/W
+			if (token[0] == 'W') longitude *= -1;
+			// done parsing
+			break;
+		}
+		//  increment pointers
+		tokenctr++;
+		token = strtok_r(NULL, ",", &tokenptr);
+	}
+
+	if (valid) {
+		gpsBuff[0] = latitude;
+		gpsBuff[1] = longitude;
+		return 2;
+	} else {
+		serialPrint("parseRMC: invalid sentence...exiting.\r\n");
+		return 0;
 	}
 }
 

@@ -34,3 +34,9 @@ void neo8m_readData_IT(float* external_gpsDataBuff);
 
 /** Check if sentence flag ready */
 uint8_t neo8m_isSentenceReady_IT();
+
+/** Accessor function to get state information */
+void neo8m_getCurrentData(float* buff);
+
+/** Mutator function to update state information */
+void neo8m_updateCurrentData(float* data);

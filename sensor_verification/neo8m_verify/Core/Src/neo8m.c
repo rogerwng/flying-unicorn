@@ -21,7 +21,30 @@ volatile static uint8_t sentenceReadyFlag = 0;
 // temp buffer to store single sentence
 static char sentenceBuffer[GPS_TEMP_BUFFER_LEN];
 // latest data information
-static float gpsData[3];
+static float gpsData[2];
+
+/** Accessor function to get state information
+ * 	INPUTS:
+ *		buff - buffer to return information
+ * */
+void neo8m_getCurrentData(float* buff) {
+	__disable_irq();
+	buff[0] = gpsData[0];
+	buff[1] = gpsData[1];
+	__enable_irq();
+}
+
+/** Mutator function to update state information
+ * 	INPUTS:
+ * 		data - float array
+ * 		nData - number of data fields to update, 2 or 3
+ */
+void neo8m_updateCurrentData(float* data) {
+	__disable_irq();
+	gpsData[0] = data[0];
+	gpsData[1] = data[1];
+	__enable_irq();
+}
 
 /**	Helper function to compute checksums of NMEA commands
  * 	INPUT:
@@ -81,6 +104,8 @@ static uint8_t validateChecksum(char* buff, uint32_t buffSize) {
 void neo8m_init(UART_HandleTypeDef* huart) {
 	myhuart = huart;
 
+	gpsData[0] = 0;
+	gpsData[1] = 0;
 
 	/** Configuring output sentences */
 	// using nmea commands to configure gps output sentences
@@ -171,7 +196,7 @@ static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff);
 uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	// validate NMEA checksum
 	if (validateChecksum(buff, buffSize) == 0) {
-		serialPrint("neo8m_parseSentence: Parsing sentence error...invalid checksum, exiting.\r\n");
+		//serialPrint("neo8m_parseSentence: Parsing sentence error...invalid checksum, exiting.\r\n");
 		return 0;
 	}
 
@@ -183,7 +208,7 @@ uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
 	} else if (strncmp(buff, "$GPRMC", 6) == 0 || strncmp(buff, "$GNRMC", 6) == 0) {
 		return parseRMC(buff, buffSize, gpsBuff);
 	} else {
-		serialPrint("neo8m_parseSentence: unknown or irrelevant NMEA sentence...exiting.\r\n");
+		//serialPrint("neo8m_parseSentence: unknown or irrelevant NMEA sentence...exiting.\r\n");
 		return 0;
 	}
 }
@@ -194,13 +219,13 @@ uint8_t neo8m_parseSentence(char* buff, uint32_t buffSize, float* gpsBuff) {
  * 		buffSize - length of buffer
  * 		gpsBuff - pointer to float array where data will be stored
  * 	OUTPUT:
- * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
+ * 		uint8_t status - 3 if valid line, 1 if valid line but not enough sats, 0 otherwise
  * */
 static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
-	serialPrint("parseGGA sentence\r\n");
+	//serialPrint("parseGGA sentence\r\n");
 
 	// valid GGA sentence, iterate thru characters starting from idx = 6, which should be comma
-	float latitude = 0.0, longitude = 0.0, altitude = 0.0;
+	float latitude = 0.0, longitude = 0.0;//, altitude = 0.0;
 	int sat_check = 1; // true if good num sats
 
 	// using strtok_r
@@ -233,7 +258,7 @@ static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
 		} else if (tokenctr == 6) {
 			// fix quality
 			if (token[0] == '\0' || token[0] == '0') {
-				serialPrint("parseGGA: invalid or missing fix quality...exiting.\r\n");
+				//serialPrint("parseGGA: invalid or missing fix quality...exiting.\r\n");
 				return 0;
 			}
 		} else if (tokenctr == 7) {
@@ -243,7 +268,7 @@ static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
 		} else if (tokenctr == 9) {
 			if (token[0] == '\0') return 0;
 			// altitude
-			altitude = atof(token);
+			//altitude = atof(token);
 			// done parsing
 			break;
 		}
@@ -256,10 +281,10 @@ static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
 	if (sat_check) {
 		gpsBuff[0] = latitude;
 		gpsBuff[1] = longitude;
-		gpsBuff[2] = altitude;
+		//gpsBuff[2] = altitude;
 		return 2;
 	} else {
-		serialPrint("parseGGA: too little sats...exiting.\r\n");
+		//serialPrint("parseGGA: too little sats...exiting.\r\n");
 		return 1;
 	}
 }
@@ -273,7 +298,7 @@ static uint8_t parseGGA(char* buff, uint32_t buffSize, float* gpsBuff) {
  * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
  * */
 static uint8_t parseGLL(char* buff, uint32_t buffSize, float* gpsBuff) {
-	serialPrint("parseGLL sentence\r\n");
+	//serialPrint("parseGLL sentence\r\n");
 
 	float latitude = 0, longitude = 0;
 	int valid = 0;
@@ -322,7 +347,7 @@ static uint8_t parseGLL(char* buff, uint32_t buffSize, float* gpsBuff) {
 		gpsBuff[1] = longitude;
 		return 2;
 	} else {
-		serialPrint("parseGLL: invalid sentence...exiting.\r\n");
+		//serialPrint("parseGLL: invalid sentence...exiting.\r\n");
 		return 0;
 	}
 }
@@ -336,7 +361,7 @@ static uint8_t parseGLL(char* buff, uint32_t buffSize, float* gpsBuff) {
  * 		uint8_t status - 2 if valid line, 1 if valid line but not enough sats, 0 otherwise
  * */
 static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff) {
-	serialPrint("parseRMC sentence\r\n");
+	//serialPrint("parseRMC sentence\r\n");
 
 	float latitude = 0, longitude = 0;
 	int valid = 0;
@@ -383,7 +408,7 @@ static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff) {
 		gpsBuff[1] = longitude;
 		return 2;
 	} else {
-		serialPrint("parseRMC: invalid sentence...exiting.\r\n");
+		//serialPrint("parseRMC: invalid sentence...exiting.\r\n");
 		return 0;
 	}
 }
@@ -391,16 +416,26 @@ static uint8_t parseRMC(char* buff, uint32_t buffSize, float* gpsBuff) {
 /**	Reading a line of valid data output in blocking mode
  * 	INPUT:
  * 		gpsData - pointer to float array where lat, long, and alt data will be stored
+ *  OUTPUT:
+ *  	either 2 or 3 indicating number of data fields read, loop continuously reads until valid data
  * */
 void neo8m_readData(float* gpsDataBuff) {
+	uint8_t maxAttempts = 20;
+
 	char buff[128];
 	neo8m_readLine(buff, 128);
+	maxAttempts--;
 	while (neo8m_parseSentence(buff, 128, gpsDataBuff) != 2) {
-		// keep trying new sentences
-		HAL_Delay(50);
-		neo8m_readLine(buff, 128);
-	}
+		if (maxAttempts < 1) {
+			serialPrint("neo8m_readData: exceeded max attempts..timeout.\r\n");
+			return;
+		}
 
+		// keep trying new sentences
+		HAL_Delay(10);
+		neo8m_readLine(buff, 128);
+		maxAttempts--;
+	}
 }
 
 

@@ -75,6 +75,29 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	}
 }
 
+void testBlockingMode() {
+	  float gpsData[2];
+	  neo8m_readData(gpsData);
+	  neo8m_updateCurrentData(gpsData);
+	  neo8m_getCurrentData(gpsData);
+
+	  char outputBuff[64];
+	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
+	  serialPrint(outputBuff);
+}
+
+void testBlockingModeShowStatus() {
+	  char buffer[128];
+	  float gpsData[2] = {0, 0};
+	  neo8m_readLine(buffer, 128);
+	  serialPrint(buffer);
+	  neo8m_parseSentence(buffer, 128, gpsData);
+
+	  char outputBuff[64];
+	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
+	  serialPrint(outputBuff);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -120,37 +143,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  /**
-	  char byte = 0;
-	  HAL_StatusTypeDef connectStatus = HAL_UART_Receive(&huart1, (uint8_t*)&byte, 1, 1000);
-	  if (connectStatus == HAL_OK) {
-		  serialPrint("Reading byte - HAL_OK\r\n");
-	  } else if (connectStatus == HAL_BUSY) {
-		  serialPrint("Reading byte - HAL_BUSY\r\n");
-	  } else if (connectStatus == HAL_ERROR) {
-		  serialPrint("Reading byte - HAL_ERROR\r\n");
-	  }
-	  char buff[3] = {byte, '\r', '\n'};
-	  serialPrint(buff);
-	  HAL_Delay(10);
-	  */
+	  //testBlockingModeShowStatus();
 
-	  char buffer[128];
-	  float gps[3];
-	  neo8m_readLine(buffer, 128);
-	  serialPrint(buffer);
-	  neo8m_parseSentence(buffer, 128, gps);
-	  HAL_Delay(100);
-
-	  /**
-	  float gpsData[3];
-	  neo8m_readData(gpsData);
-
-	  char outputBuff[64];
-	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f, Alt=%.3f\r\n", gpsData[0], gpsData[1], gpsData[2]);
-	  serialPrint(outputBuff);
-
-	  HAL_Delay(500);*/
+	  testBlockingMode();
+	  HAL_Delay(50);
 
     /* USER CODE END WHILE */
 

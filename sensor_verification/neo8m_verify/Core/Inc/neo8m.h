@@ -24,7 +24,7 @@ void neo8m_readData(float* gpsDataBuff);
 /**	INTERUPT INTERFACE */
 
 /** Read byte of data through interupt */
-void neo8m_readByte_IT(uint8_t byte);
+uint8_t neo8m_readByte_IT(uint8_t byte);
 
 /** Once full sentence received in interupt handler (detects '\n'), parse sentence */
 void neo8m_processSentence_IT();
@@ -32,11 +32,8 @@ void neo8m_processSentence_IT();
 /** Reading GPS data that is updated through interupt */
 void neo8m_readData_IT(float* external_gpsDataBuff);
 
+/** Mutator function to update state information */
+void neo8m_updateData_IT(float* data);
+
 /** Check if sentence flag ready */
 uint8_t neo8m_isSentenceReady_IT();
-
-/** Accessor function to get state information */
-void neo8m_getCurrentData(float* buff);
-
-/** Mutator function to update state information */
-void neo8m_updateCurrentData(float* data);

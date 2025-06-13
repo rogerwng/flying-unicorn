@@ -57,7 +57,7 @@ static void delay_us(uint16_t t) {
 void hcsr04_trigger() {
 	// pull trigger high, then low
 	HAL_GPIO_WritePin(myGPIO, triggerPin, GPIO_PIN_SET);
-	delay_ms(10);
+	delay_us(10);
 	HAL_GPIO_WritePin(myGPIO, triggerPin, GPIO_PIN_RESET);
 
 	// enable input capture interrupt

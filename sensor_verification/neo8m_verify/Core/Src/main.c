@@ -69,33 +69,53 @@ void serialPrint(char* str) {
 
 /** UART Interupt Function */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-	if (huart == &huart2) {
-		neo8m_readByte_IT(gpsByte);
-		HAL_UART_Receive_IT(huart, &gpsByte, 1);
+	if (huart == &huart1) {
+		uint8_t rearm = neo8m_readByte_IT(gpsByte);
+		if (rearm) {
+			HAL_UART_Receive_IT(huart, &gpsByte, 1);
+		}
 	}
 }
 
 void testBlockingMode() {
-	  float gpsData[2];
-	  neo8m_readData(gpsData);
-	  neo8m_updateCurrentData(gpsData);
-	  neo8m_getCurrentData(gpsData);
+	float gpsData[2];
+	neo8m_readData(gpsData);
+	neo8m_updateData_IT(gpsData);
+	neo8m_readData_IT(gpsData);
 
-	  char outputBuff[64];
-	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
-	  serialPrint(outputBuff);
+	char outputBuff[64];
+	snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
+	serialPrint(outputBuff);
 }
 
+// make sure to uncomment debug lines in neo8m.c
+// in the future maybe have global flag that enables or disables debug mode - maybe verbosity flag
 void testBlockingModeShowStatus() {
-	  char buffer[128];
-	  float gpsData[2] = {0, 0};
-	  neo8m_readLine(buffer, 128);
-	  serialPrint(buffer);
-	  neo8m_parseSentence(buffer, 128, gpsData);
 
-	  char outputBuff[64];
-	  snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
-	  serialPrint(outputBuff);
+	char buffer[128];
+	float gpsData[2] = {0, 0};
+	neo8m_readLine(buffer, 128);
+	serialPrint(buffer);
+	neo8m_parseSentence(buffer, 128, gpsData);
+
+	char outputBuff[64];
+	snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
+	serialPrint(outputBuff);
+}
+
+void testITMode() {
+	uint8_t sentenceReadyFlag = neo8m_isSentenceReady_IT();
+
+	if (sentenceReadyFlag) {
+		neo8m_processSentence_IT();
+		HAL_UART_Receive_IT(&huart1, &gpsByte, 1);
+	}
+
+	float gpsData[2];
+	neo8m_readData_IT(gpsData);
+	char outputBuff[64];
+	snprintf(outputBuff, sizeof(outputBuff), "Lat=%.4f, Long=%.4f\r\n", gpsData[0], gpsData[1]);
+	serialPrint(outputBuff);
 }
 
 /* USER CODE END 0 */
@@ -137,6 +157,9 @@ int main(void)
   HAL_Delay(1000);
   serialPrint("Initializing NEO8M.\r\n");
   neo8m_init(&huart1);
+
+  // enables the interrupt mode
+  HAL_UART_Receive_IT(&huart1, &gpsByte, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,8 +168,10 @@ int main(void)
   {
 	  //testBlockingModeShowStatus();
 
-	  testBlockingMode();
-	  HAL_Delay(50);
+	  //testBlockingMode();
+
+	  testITMode();
+	  HAL_Delay(100);
 
     /* USER CODE END WHILE */
 

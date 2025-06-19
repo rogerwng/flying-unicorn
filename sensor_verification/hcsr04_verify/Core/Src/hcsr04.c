@@ -11,12 +11,15 @@
 
 #define HCSR04_CAPTURE_TIMEOUT_US 600
 
+// wait flag set when sensor is triggered and we are waiting for echo to arrive/finish
+volatile static uint8_t waitFlag = 0;
+volatile static uint32_t t0;
 // capture flag set when interrupt detects falling edge (end of echo signal)
-static uint8_t captureFlag = 0;
-static uint32_t t1;
-static uint32_t t2;
+volatile static uint8_t captureFlag = 0;
+volatile static uint32_t t1;
+volatile static uint32_t t2;
 // measurement data
-static float distance;
+volatile static float distance;
 // compensation constants
 uint32_t timerPrescaler;
 uint32_t clkFreq;
@@ -48,7 +51,7 @@ void hcsr04_init(TIM_HandleTypeDef* htim, uint32_t channel, GPIO_TypeDef* GPIOx,
 
 	// timer clock doubled when APB1 prescaler > 1
 	if ((RCC->CFGR & RCC_CFGR_PPRE1) != RCC_CFGR_PPRE1_DIV1) {
-		clfFreq *= 2;
+		clkFreq *= 2;
 	}
 }
 
@@ -84,11 +87,18 @@ static float calculateTime(uint32_t time1, uint32_t time2) {
 	}
 
 	float time_us = (diff * (timerPrescaler + 1)) / clkFreq;
+
+	return time_us;
 }
 
 /**	Trigger sensor and enable interrupt
  * */
 void hcsr04_trigger() {
+	// dont trigger if we are still waiting for last trigger/wait/echo cycle
+	if (waitFlag) {
+		return;
+	}
+
 	// pull trigger high, then low
 	HAL_GPIO_WritePin(myGPIO, triggerPin, GPIO_PIN_SET);
 	delay_us(10);
@@ -96,6 +106,14 @@ void hcsr04_trigger() {
 
 	// enable input capture interrupt
 	HAL_TIM_IC_Start_IT(myhtim, timChannel);
+
+	// set wait flag
+	__disable_irq();
+	waitFlag = 1;
+	__enable_irq();
+
+	// save start time
+	t0 = __HAL_TIM_GET_COUNTER(myhtim);
 }
 
 /**	IC Interrupt Routine
@@ -118,9 +136,10 @@ void hcsr04_echo_IT() {
 		// convert tick counts to seconds
 		float time_us = calculateTime(t1, t2);
 
-		// update distance
+		// update distance and waitFlag
 		__disable_irq();
 		distance = time_us/58.0f;
+		waitFlag = 0;
 		__enable_irq();
 
 		captureFlag = 0;
@@ -130,17 +149,49 @@ void hcsr04_echo_IT() {
 
 /** Checking for hanging echo, if hanging, stops IT
  * 	OUTPUT:
- * 		0 (not hanging), 1 (hanging)
+ * 		0 (not hanging), 1 (hanging, IT stopped)
  */
 uint8_t hcsr04_hangCheck() {
-	if (captureFlag) {
-		uint32_t t = HAL_TIM_ReadCapturedValue(myhtim, timChannel);
+	if (waitFlag) {
+		uint32_t t =__HAL_TIM_GET_COUNTER(myhtim);
 
-		float time_us = calculateTime(t1, t);
+		float time_us = calculateTime(t0, t);
 		if (time_us >= HCSR04_CAPTURE_TIMEOUT_US) {
 			captureFlag = 0;
 			HAL_TIM_IC_Stop_IT(myhtim, timChannel);
-			__HAL_TIM_SET_CAPTURE_POLARITY(myhtim, timChannel, TIM_INPUTCHANNELPOLARITY_RISING);
+			__HAL_TIM_SET_CAPTUREPOLARITY(myhtim, timChannel, TIM_INPUTCHANNELPOLARITY_RISING);
+
+			return 1;
 		}
 	}
+
+	return 0;
+}
+
+/** Get latest distance measurement
+ * 	OUTPUT:
+ * 		distance
+ */
+float hcsr04_readDistance() {
+	float t;
+
+	__disable_irq();
+	t = distance;
+	__enable_irq();
+
+	return t;
+}
+
+/** Check if sensor is busy (if we are waiting) but don't do anything
+ * 	OUTPUT:
+ * 		waitFlag
+ */
+uint8_t hcsr04_busyCheck() {
+	uint8_t t;
+
+	__disable_irq();
+	t = waitFlag;
+	__enable_irq();
+
+	return t;
 }

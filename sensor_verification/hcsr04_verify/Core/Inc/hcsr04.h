@@ -17,4 +17,10 @@ void hcsr04_trigger();
 void hcsr04_echo_IT();
 
 /** Read latest distance measurement */
-float hcsr04_readData();
+float hcsr04_readDistance();
+
+/** Checking for hanging echo, if hanging, stops IT */
+uint8_t hcsr04_hangCheck();
+
+/** Check if sensor is busy (if we are waiting) but don't do anything */
+uint8_t hcsr04_busyCheck();

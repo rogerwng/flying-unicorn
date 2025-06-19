@@ -109,13 +109,27 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   setSerialHUART(&huart2);
-  hcsr04_init(&htim12, TIM_CHANNEL_2, &GPIOB, GPIO_PIN_14);
+  hcsr04_init(&htim12, TIM_CHANNEL_2, GPIOB, GPIO_PIN_14);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  float distance = 0.0;
   while (1)
   {
+	  // hang-check
+	  hcsr04_hangCheck();
+	  // busy-check, trigger if not busy
+	  if (!hcsr04_busyCheck()) {
+		  // actually we should do smt like a ready check, bc sensor needs 60ms between measurements
+		  hcsr04_trigger();
+	  }
+	  // data read
+	  distance = hcsr04_readDistance();
+	  char outputBuff[64];
+	  snprintf(outputBuff, sizeof(outputBuff), "Dist=%.4f\r\n", distance);
+	  serialPrint(outputBuff);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

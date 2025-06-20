@@ -9,7 +9,8 @@
 
 #include "hcsr04.h"
 
-#define HCSR04_CAPTURE_TIMEOUT_US 600
+#define HCSR04_CAPTURE_TIMEOUT_US 10000UL // 10ms
+#define HCSR04_CAPTURE_CYCLE_TIME_US 60000UL // 60ms
 
 // wait flag set when sensor is triggered and we are waiting for echo to arrive/finish
 volatile static uint8_t waitFlag = 0;
@@ -32,7 +33,7 @@ static uint16_t triggerPin;
 
 /** static function declarations */
 static void delay_us(uint16_t t);
-static float calculateTime(uint32_t time1, uint32_t time2);
+static uint32_t calculateTime(uint32_t time1, uint32_t time2);
 
 /**	Initializing sensor by saving TIM and GPIO handles
  * 	INPUTS:
@@ -53,6 +54,9 @@ void hcsr04_init(TIM_HandleTypeDef* htim, uint32_t channel, GPIO_TypeDef* GPIOx,
 	if ((RCC->CFGR & RCC_CFGR_PPRE1) != RCC_CFGR_PPRE1_DIV1) {
 		clkFreq *= 2;
 	}
+
+	// start continuous timer
+	HAL_TIM_Base_Start(myhtim);
 }
 
 /**	Delay function for microsecond delays using timer
@@ -60,15 +64,14 @@ void hcsr04_init(TIM_HandleTypeDef* htim, uint32_t channel, GPIO_TypeDef* GPIOx,
  * 		t - time in microseconds
  * */
 static void delay_us(uint16_t t) {
-	// clear timer counter
-	__HAL_TIM_SET_COUNTER(myhtim, 0);
-	// start timer
-	HAL_TIM_Base_Start(myhtim);
+	uint32_t timeStart = __HAL_TIM_GET_COUNTER(myhtim);
+	uint32_t timeDiff = 0.0;
 
-	// count to delay (each count is 1us)
-	while (__HAL_TIM_GET_COUNTER(myhtim) < t);
-	// stop counting
-	HAL_TIM_Base_Stop(myhtim);
+	while (timeDiff < t) {
+		uint32_t timeCurr = __HAL_TIM_GET_COUNTER(myhtim);
+		timeDiff = calculateTime(timeStart, timeCurr);
+	}
+
 }
 
 /** Function to calculate time from tick differences
@@ -78,7 +81,7 @@ static void delay_us(uint16_t t) {
  * 	OUTPUTS:
  * 		time in us
  */
-static float calculateTime(uint32_t time1, uint32_t time2) {
+static uint32_t calculateTime(uint32_t time1, uint32_t time2) {
 	uint32_t diff;
 	if (time2 >= time1) {
 		diff = time2 - time1;
@@ -86,7 +89,9 @@ static float calculateTime(uint32_t time1, uint32_t time2) {
 		diff = (__HAL_TIM_GET_AUTORELOAD(myhtim) - time2 + time1 + 1); // handle overflow
 	}
 
-	float time_us = (diff * (timerPrescaler + 1)) / clkFreq;
+	// avoid 32 bit overflow
+	uint64_t temp = (uint64_t)diff * (timerPrescaler + 1) * 1000000ULL;
+	uint32_t time_us = (uint32_t)(temp / clkFreq);
 
 	return time_us;
 }
@@ -121,6 +126,7 @@ void hcsr04_trigger() {
 void hcsr04_echo_IT() {
 	// 1st capture (rising edge) - start of echo
 	if (!captureFlag) {
+		//serialPrint("Rising edge echo IT\r\n");
 		t1 = HAL_TIM_ReadCapturedValue(myhtim, timChannel);
 
 		__HAL_TIM_SET_CAPTUREPOLARITY(myhtim, timChannel, TIM_INPUTCHANNELPOLARITY_FALLING);
@@ -128,17 +134,20 @@ void hcsr04_echo_IT() {
 		captureFlag = 1;
 
 	} else if (captureFlag) {
+		//serialPrint("Falling edge echo IT, capture complete.\r\n");
 		// 2nd capture (falling edge) - echo complete
 		t2 = HAL_TIM_ReadCapturedValue(myhtim, timChannel);
 
 		HAL_TIM_IC_Stop_IT(myhtim, timChannel);
+		__HAL_TIM_ENABLE(myhtim); // omg!!! - Stop_IT disables counter, need to re-enable
 
-		// convert tick counts to seconds
-		float time_us = calculateTime(t1, t2);
+		// convert tick counts to micro-seconds
+		uint32_t time_us = calculateTime(t1, t2);
+		float d = (float)time_us / 58.0;
 
 		// update distance and waitFlag
 		__disable_irq();
-		distance = time_us/58.0f;
+		distance = d;
 		waitFlag = 0;
 		__enable_irq();
 
@@ -155,9 +164,10 @@ uint8_t hcsr04_hangCheck() {
 	if (waitFlag) {
 		uint32_t t =__HAL_TIM_GET_COUNTER(myhtim);
 
-		float time_us = calculateTime(t0, t);
+		uint32_t time_us = calculateTime(t0, t);
 		if (time_us >= HCSR04_CAPTURE_TIMEOUT_US) {
 			captureFlag = 0;
+			waitFlag = 0;
 			HAL_TIM_IC_Stop_IT(myhtim, timChannel);
 			__HAL_TIM_SET_CAPTUREPOLARITY(myhtim, timChannel, TIM_INPUTCHANNELPOLARITY_RISING);
 
@@ -182,16 +192,29 @@ float hcsr04_readDistance() {
 	return t;
 }
 
-/** Check if sensor is busy (if we are waiting) but don't do anything
+/** Check if sensor ready for next measurement (60ms have passed since last trigger and we are not waiting)
  * 	OUTPUT:
- * 		waitFlag
+ * 		0 (not ready) or 1 (ready)
  */
-uint8_t hcsr04_busyCheck() {
-	uint8_t t;
+uint8_t hcsr04_readyCheck() {
+	// if waiting for echo, not ready
+	if (waitFlag) {
+		return 0;
+		serialPrint("Not ready, wait flag");
+	}
 
-	__disable_irq();
-	t = waitFlag;
-	__enable_irq();
+	// not waiting for echo, how long since last trigger
+	uint32_t t = __HAL_TIM_GET_COUNTER(myhtim);
+	uint32_t time_us = calculateTime(t0, t);
+	// if enough time passed, we are ready to trigger again
+	if (time_us >= HCSR04_CAPTURE_CYCLE_TIME_US) {
+		return 1;
+	}
 
-	return t;
+	return 0;
 }
+
+
+
+
+

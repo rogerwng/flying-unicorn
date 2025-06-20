@@ -109,6 +109,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   setSerialHUART(&huart2);
+  serialPrint("Initializing HCSR04.\r\n");
   hcsr04_init(&htim12, TIM_CHANNEL_2, GPIOB, GPIO_PIN_14);
   /* USER CODE END 2 */
 
@@ -119,20 +120,20 @@ int main(void)
   {
 	  // hang-check
 	  hcsr04_hangCheck();
-	  // busy-check, trigger if not busy
-	  if (!hcsr04_busyCheck()) {
-		  // actually we should do smt like a ready check, bc sensor needs 60ms between measurements
+	  // check if we r ready for another trigger
+	  if (hcsr04_readyCheck()) {
 		  hcsr04_trigger();
 	  }
 	  // data read
 	  distance = hcsr04_readDistance();
-	  char outputBuff[64];
+	  char outputBuff[32];
 	  snprintf(outputBuff, sizeof(outputBuff), "Dist=%.4f\r\n", distance);
 	  serialPrint(outputBuff);
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_Delay(50);
   }
   /* USER CODE END 3 */
 }

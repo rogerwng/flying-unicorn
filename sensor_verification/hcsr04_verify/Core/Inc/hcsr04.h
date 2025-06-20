@@ -22,5 +22,5 @@ float hcsr04_readDistance();
 /** Checking for hanging echo, if hanging, stops IT */
 uint8_t hcsr04_hangCheck();
 
-/** Check if sensor is busy (if we are waiting) but don't do anything */
-uint8_t hcsr04_busyCheck();
+/** Check if sensor ready for next measurement (60ms have passed since last trigger and we are not waiting)*/
+uint8_t hcsr04_readyCheck();

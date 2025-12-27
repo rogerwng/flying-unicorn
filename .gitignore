@@ -1,0 +1,9 @@
+# VSCode stuff
+.*/*
+.DS_STORE
+
+# Whiteboards
+drawio/*
+
+# Binaries
+*.elf

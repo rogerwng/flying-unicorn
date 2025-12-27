@@ -1,0 +1,8 @@
+/workspace/flight_software/build/Debug/CMakeFiles/flight_software.dir
+/workspace/flight_software/build/Debug/CMakeFiles/edit_cache.dir
+/workspace/flight_software/build/Debug/CMakeFiles/rebuild_cache.dir
+/workspace/flight_software/build/Debug/cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir
+/workspace/flight_software/build/Debug/cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir
+/workspace/flight_software/build/Debug/cmake/stm32cubemx/CMakeFiles/FreeRTOS.dir
+/workspace/flight_software/build/Debug/cmake/stm32cubemx/CMakeFiles/edit_cache.dir
+/workspace/flight_software/build/Debug/cmake/stm32cubemx/CMakeFiles/rebuild_cache.dir

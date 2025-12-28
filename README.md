@@ -17,5 +17,5 @@ REV1 Avionics stack:
 - NEO-8M GPS    
 
 ## File Overview    
-*/flight_software* - REV2 flight software source
+*/flight_software* - REV2 flight software source  
 */sensor_verification* - experimental drivers for REV1 avionics 

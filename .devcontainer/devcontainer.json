@@ -1,0 +1,17 @@
+{
+    "name": "STM32 Flight Software",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "stm32-dev",
+    "workspaceFolder": "/workspace",
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "marus25.cortex-debug"
+            ]
+        }
+    },
+    "postCreateCommand": "arm-none-eabi-gcc --version"
+}

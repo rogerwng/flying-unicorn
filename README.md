@@ -1,7 +1,13 @@
 # Drone Flight Software for a Custom Autonomous Drone  
 A very much in-progress project. 
 
-Avionics stack: 
+REV2 Avionics Stack:
+- STM32F405RGT6 MCU
+- MPU6500 IMU
+- LIS2MDLTR Magnetometer
+- BMP388 Altimeteter
+
+REV1 Avionics stack: 
 - STM32F405RGT6 MCU 
 - MPU6500 IMU 
 - GY273 (QMC5883L) Magnetometer 
@@ -11,4 +17,5 @@ Avionics stack:
 - NEO-8M GPS    
 
 ## File Overview    
-*/sensor_verification* - implementing low-level drivers and testing code 
+*/flight_software* - REV2 flight software source
+*/sensor_verification* - experimental drivers for REV1 avionics 

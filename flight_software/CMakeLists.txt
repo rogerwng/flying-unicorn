@@ -58,6 +58,7 @@ set (SYSINIT_SRC
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${UTILITIES_SRC}
+    ${SYSINIT_SRC}
 )
 
 # Add include paths

@@ -1,5 +1,6 @@
-# VSCode stuff
-.*/*
+# Unneeded stuff
+.vscode/
+.metadata/
 .DS_STORE
 
 # Whiteboards

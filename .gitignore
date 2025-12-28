@@ -7,3 +7,6 @@ drawio/*
 
 # Binaries
 *.elf
+
+# Build outputs
+flight_software/build/

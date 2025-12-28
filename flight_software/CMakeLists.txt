@@ -45,14 +45,26 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
+### DEFINE USER SRC MODULES ###
+
+set (UTILITIES_SRC
+    Core/Src/utils/Logger.c
+)
+set (SYSINIT_SRC
+    Core/Src/init/SystemInitializer.c
+)
+
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    ${UTILITIES_SRC}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    Core/Inc/utils
+    Core/Inc/init
 )
 
 # Add project symbols (macros)

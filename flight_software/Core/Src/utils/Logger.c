@@ -24,6 +24,7 @@ bool Logger_Init() {
 
     // Initialize the USB device
     MX_USB_DEVICE_Init();
+    HAL_Delay(3500); // 3.5sec wait for PC to connect
     LOG_DIRECT(TAG, "Initialized the USB device");
 
     // Initialize the message queue
@@ -53,6 +54,10 @@ void LOG(const char* tag, const char* format, ...) {
 }
 
 void LOG_DIRECT(const char* tag, const char* format, ...) {
+    // This function should only be used before the logger task is ready
+    if (loggerTaskRunning)
+        return;
+
     char msg[LOG_TOTAL_MSG_SIZE_DIRECT]; 
 
     // Add tag first
@@ -74,7 +79,6 @@ void LOG_DIRECT(const char* tag, const char* format, ...) {
     msg[totalLen++] = '\n';
     msg[totalLen] = '\0';
 
-    // CDC Transmit
     CDC_Transmit_FS((uint8_t*)msg, totalLen);
 }
 
@@ -85,7 +89,7 @@ void LoggerTask(void *argument) {
     uint32_t tickFreq = osKernelGetTickFreq();
     uint32_t timeoutTicks = 500 * tickFreq / 1000U; // 500ms in ticks timeout
 
-    LOG(TAG, "Starting Logger queue TX loop");
+    LOG(TAG, "Started Logger queue TX loop");
 
     log_msg_t msgBuff;
     char msg[LOG_TOTAL_MSG_SIZE];

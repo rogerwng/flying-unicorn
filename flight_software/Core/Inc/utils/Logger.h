@@ -2,7 +2,10 @@
  * Thread safe Logging Utility that prints via USB-CDC
  */
 
+#pragma once
+
 #include <stdbool.h>
+#include <stdint.h>
 
 #define LOG_MAX_TAG_LEN 8
 #define LOG_MAX_MSG_LEN 116
@@ -15,9 +18,9 @@
 
 
 typedef struct {
-    const uint32_t timeTicks;
+    uint32_t timeTicks;
     const char* tag;
-    const char msg[LOG_MAX_MSG_LEN];
+    char msg[LOG_MAX_MSG_LEN];
 } log_msg_t;
 
 /**

@@ -23,10 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "usbd_cdc_if.h"
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
+#include "SystemInitializer.h"
 
 /* USER CODE END Includes */
 
@@ -46,13 +43,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -60,7 +51,6 @@ const osThreadAttr_t defaultTask_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -124,10 +114,22 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
+  /** SYSTEM INITIALIZER */
+  if (SystemInitializer_Init())
+    SystemInitializer_Start(); // create tasks and start kernel
+
+  // we should never get here unless init fails/kernel stopped
+  for (int i = 0; i < 5; i++) {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_2);
+    HAL_Delay(50);
+  }
+
+  __disable_irq();
+  NVIC_SystemReset();
+
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -136,7 +138,6 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -229,41 +230,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void SerialPrint(const char* fmt, ...) {
-  char buf[128];
-  va_list arg;
-  va_start(arg, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, arg);
-  va_end(arg);
-  CDC_Transmit_FS((uint8_t *)buf, strlen(buf));
-}
 
 /* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    // Blinky LED
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_2);
-
-    SerialPrint("Count = %f\r\n", 3.14f);
-
-    osDelay(500);
-  }
-  /* USER CODE END 5 */
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode

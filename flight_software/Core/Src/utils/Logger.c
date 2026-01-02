@@ -1,5 +1,5 @@
 /**
- * Thread safe Logging Utility that prints via USB-CDC
+ * Thread safe Logging Utility that can be configured for UART or USB-CDC
  */
 
 #include "Logger.h"
@@ -19,13 +19,29 @@ static const char TAG[] = "LOGGER";
 static volatile bool loggerTaskRunning;
 static osMessageQueueId_t queue;
 
-bool Logger_Init() {
-    loggerTaskRunning = false;
+// Pointer to print function
+static void (*serialPrint)(uint8_t*, int);
 
-    // Initialize the USB device
-    MX_USB_DEVICE_Init();
-    HAL_Delay(3500); // 3.5sec wait for PC to connect
-    LOG_DIRECT(TAG, "Initialized the USB device");
+// Hardware print functions
+static void CDC_Print(uint8_t* buff, int len) {
+    CDC_Transmit_FS(buff, len);
+}
+
+static UART_HandleTypeDef* loggerUart;
+static void UART_Print(uint8_t* buff, int len) {
+    HAL_UART_Transmit(loggerUart, buff, len, HAL_MAX_DELAY);
+}
+
+bool Logger_Init(log_type_t logType, UART_HandleTypeDef* huart) {
+    loggerTaskRunning = false;
+    loggerUart = huart;
+
+    // Logging via UART1 before USB CDC is ready
+    if (logType == LOGGER_TYPE_UART) {
+        serialPrint = UART_Print;
+    } else if (logType == LOGGER_TYPE_USBCDC) {
+        serialPrint = CDC_Print;
+    }
 
     // Initialize the message queue
     queue = osMessageQueueNew(LOG_QUEUE_SIZE, sizeof(log_msg_t), NULL);
@@ -79,11 +95,14 @@ void LOG_DIRECT(const char* tag, const char* format, ...) {
     msg[totalLen++] = '\n';
     msg[totalLen] = '\0';
 
-    CDC_Transmit_FS((uint8_t*)msg, totalLen);
+    serialPrint((uint8_t*)msg, totalLen);
 }
 
 void LoggerTask(void *argument) {
     loggerTaskRunning = true;
+
+    // Initialize USB after RTOS kernel starts
+    MX_USB_DEVICE_Init();
 
     // Set up timing constants
     uint32_t tickFreq = osKernelGetTickFreq();
@@ -107,7 +126,6 @@ void LoggerTask(void *argument) {
         // Format string
         snprintf(msg, LOG_TOTAL_MSG_SIZE, "[%lu] [%s] %s\r\n", timeMs, msgBuff.tag, msgBuff.msg);
 
-        // CDC Transmit
-        CDC_Transmit_FS((uint8_t*)msg, strlen(msg));
+        serialPrint((uint8_t*)msg, strlen(msg));
     }
 }

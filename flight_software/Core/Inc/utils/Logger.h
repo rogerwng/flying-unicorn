@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "stm32f4xx_hal.h"
+
 #define LOG_MAX_TAG_LEN 8
 #define LOG_MAX_MSG_LEN 116
 #define LOG_QUEUE_SIZE 16
@@ -16,6 +18,10 @@
 // Total msg size for direct logs
 #define LOG_TOTAL_MSG_SIZE_DIRECT (LOG_MAX_TAG_LEN + LOG_MAX_MSG_LEN + 6) // TAG + MSG + '[] \r\n' + null terminator
 
+typedef enum {
+    LOGGER_TYPE_UART,
+    LOGGER_TYPE_USBCDC
+} log_type_t;
 
 typedef struct {
     uint32_t timeTicks;
@@ -25,9 +31,11 @@ typedef struct {
 
 /**
  * @brief Initializes the logging system: USB_CDC, RTOS queue
+ * @param logType Enum representing UART/USB log type to configure
+ * @param huart Pointer to the logging UART handle
  * @returns True on success, False otherwise
  */
-bool Logger_Init();
+bool Logger_Init(log_type_t logType, UART_HandleTypeDef* huart);
 
 /**
  * @brief Formats a message and pushes it to the log queue

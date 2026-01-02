@@ -123,7 +123,12 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
 
   /** SYSTEM INITIALIZER */
-  if (SystemInitializer_Init())
+  // Struct for CubeMX generated handles, SystemInit distributes handles to modules
+  SystemHardwareHandles_t hardwareHandles = {
+    .p_huart1 = &huart1
+  };
+  
+  if (SystemInitializer_Init(hardwareHandles))
     SystemInitializer_Start(); // create tasks and start kernel
 
   // we should never get here unless init fails/kernel stopped

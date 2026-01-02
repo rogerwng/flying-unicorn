@@ -13,9 +13,14 @@ static const char TAG[] = "SYSINIT";
 // Task handles
 static osThreadId_t loggerTaskHandle;
 
-bool SystemInitializer_Init() {
+// System Hardware Handles
+static SystemHardwareHandles_t sysHardwareHandles;
+
+bool SystemInitializer_Init(SystemHardwareHandles_t hardwareHandles) {
+    sysHardwareHandles = hardwareHandles;
+
     // Initialize logger first
-    if (!Logger_Init()) 
+    if (!Logger_Init(LOGGER_TYPE_UART, sysHardwareHandles.p_huart1)) 
         return false;
     LOG_DIRECT(TAG, "Logger initialized");
 

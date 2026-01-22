@@ -10,6 +10,7 @@
 
 typedef struct {
     UART_HandleTypeDef* p_huart1;
+    SPI_HandleTypeDef* p_hspi2;
 } SystemHardwareHandles_t;
 
 /**

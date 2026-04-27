@@ -43,37 +43,22 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+# Add flight_software sources
+add_subdirectory(../src ${CMAKE_BINARY_DIR}/src)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-### DEFINE USER SRC MODULES ###
-
-set (UTILITIES_SRC
-    Core/Src/utils/Logger.c
-)
-set (SYSINIT_SRC
-    Core/Src/init/SystemInitializer.c
-)
-set (SENSOR_SRC
-    Core/Src/sensors/IMUSensor_MPU6500_SPI.c
-)
-
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${UTILITIES_SRC}
-    ${SYSINIT_SRC}
-    ${SENSOR_SRC}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    Core/Inc/utils
-    Core/Inc/init
-    Core/Inc/sensors
 )
 
 # Add project symbols (macros)

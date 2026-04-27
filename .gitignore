@@ -10,4 +10,4 @@ drawio/*
 *.elf
 
 # Build outputs
-flight_software/build/
+flight_software/bsp/build/

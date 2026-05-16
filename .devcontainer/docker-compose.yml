@@ -1,9 +1,14 @@
 services:
   stm32-dev:
+    network_mode: host
+    privileged: true
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspace
+      # mount all devices
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
     working_dir: /workspace
     command: sleep infinity

@@ -1,18 +1,22 @@
 #!/bin/bash
 
-set -euo pipefall
+set -e
 
 # CD into script directory
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 PRESET="Debug"
 CLEAN=false
+FLASH=false
 
 # Parse args
 for arg in "$@"; do
     case "$arg" in
         --clean)
             CLEAN=true
+            ;;
+        --flash)
+            FLASH=true
             ;;
         -*)
             echo "Unknown option: $arg"
@@ -33,3 +37,8 @@ if [ "$CLEAN" = true ]; then
 fi
 
 cmake --workflow --preset "$PRESET"
+
+if [ "$FLASH" = true ]; then
+    echo "Flashing application at build/$PRESET/flight_software.elf"
+    openocd -f ../openocd.cfg -c "init" -c "halt" -c "program build/$PRESET/flight_software.elf verify reset exit"
+fi

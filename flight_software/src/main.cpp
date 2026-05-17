@@ -1,16 +1,15 @@
 #include "main.h"
+
+#include "BoardConfig.h"
 #include "Logger.h"
 
 static const char TAG[] = "MAIN";
-
-// UART1 for the logger
-extern UART_HandleTypeDef huart1;
 
 // App_Init is called before the freeRTOS scheduler runs - initialize all freeRTOS tasks/objects here
 extern "C" void App_Init(void)
 {
     // Initialize the logger
-    if (!Logger::getInstance().initialize(&huart1))
+    if (!Logger::getInstance().initialize(LOGGER_HUART))
     {
         LOG_DIRECT(TAG, "Failed to initialize logger");
     }

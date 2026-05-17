@@ -131,6 +131,7 @@ bool Logger::initialize(UART_HandleTypeDef* huart)
     bool status = false;
     huart_ = huart;
 
+#ifdef ENABLE_LOGGING
     // Initialize message queue
     queue_ = osMessageQueueNew(LOG_QUEUE_SIZE, sizeof(LogMsg_t), NULL);
     if (queue_ != NULL)
@@ -148,6 +149,9 @@ bool Logger::initialize(UART_HandleTypeDef* huart)
 
         loggerTaskHandle_ = osThreadNew(Logger::loggerTaskEntry, NULL, &logTaskAttr);
     }
+#else
+    status = true;
+#endif
 
     return status;
 }
@@ -193,6 +197,7 @@ void Logger::loggerTask(void)
 // Logging utilities
 // ===========================
 
+#ifdef ENABLE_LOGGING
 void LOG(const char* tag, const char* format, ...)
 {
     // New message
@@ -245,3 +250,16 @@ void LOG_DIRECT(const char* tag, const char* format, ...)
 
     Logger::getInstance().log((uint8_t*)msg, totalLen);
 }
+#else 
+void LOG(const char* tag, const char* format, ...)
+{
+    (void)tag;
+    (void)format;
+};
+
+void LOG_DIRECT(const char* tag, const char* format, ...)
+{
+    (void)tag;
+    (void)format;
+}
+#endif

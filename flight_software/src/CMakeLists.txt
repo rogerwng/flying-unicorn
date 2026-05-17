@@ -26,6 +26,11 @@ target_link_libraries(lib_fsw PUBLIC
     stm32cubemx
 )
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Enabling debug logs")
+    target_compile_definitions(lib_fsw PRIVATE ENABLE_LOGGING)
+endif()
+
 # Link user code into the main CubeMX/BSP executable.
 target_link_libraries(${CMAKE_PROJECT_NAME}
     lib_fsw

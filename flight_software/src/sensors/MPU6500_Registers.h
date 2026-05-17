@@ -2,14 +2,14 @@
 
 #include <cstdint>
 
-namespace MPU6500
+namespace MPU6500_REG
 {
 
 // ===========================
 // Register map
 // ===========================
 
-namespace REG_CONFIG
+namespace CONFIG
 {
     inline constexpr uint8_t ADDRESS = 0x1A;
     inline constexpr uint8_t RESET = 0x00;
@@ -23,7 +23,7 @@ namespace REG_CONFIG
     inline constexpr uint8_t DLPF_CFG_0 = (1 << 0);
 };
 
-namespace REG_GYRO_CONFIG
+namespace GYRO_CONFIG
 {
     inline constexpr uint8_t ADDRESS = 0x1B;
     inline constexpr uint8_t RESET = 0x00;
@@ -37,7 +37,7 @@ namespace REG_GYRO_CONFIG
     inline constexpr uint8_t FCHOICE_B_0 = (1 << 0);
 };
 
-namespace REG_ACCEL_CONFIG
+namespace ACCEL_CONFIG
 {
     inline constexpr uint8_t ADDRESS = 0x1C;
     inline constexpr uint8_t RESET = 0x00;
@@ -49,7 +49,7 @@ namespace REG_ACCEL_CONFIG
     inline constexpr uint8_t ACCEL_FS_SEL_0 = (1 << 3);
 };
 
-namespace REG_ACCEL_CONFIG_2
+namespace ACCEL_CONFIG_2
 {
     inline constexpr uint8_t ADDRESS = 0x1D;
     inline constexpr uint8_t RESET = 0x00;
@@ -60,80 +60,80 @@ namespace REG_ACCEL_CONFIG_2
     inline constexpr uint8_t A_DLPF_CFG_0 = (1 << 0);
 };
 
-namespace REG_ACCEL_XOUT_H
+namespace ACCEL_XOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x3B;
 };
 
-namespace REG_ACCEL_XOUT_L
+namespace ACCEL_XOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x3C;
 };
 
-namespace REG_ACCEL_YOUT_H
+namespace ACCEL_YOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x3D;
 };
 
-namespace REG_ACCEL_YOUT_L
+namespace ACCEL_YOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x3E;
 };
 
-namespace REG_ACCEL_ZOUT_H
+namespace ACCEL_ZOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x3F;
 };
 
-namespace REG_ACCEL_ZOUT_L
+namespace ACCEL_ZOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x40;
 };
 
-namespace REG_TEMP_OUT_H
+namespace TEMP_OUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x41;
 };
 
-namespace REG_TEMP_OUT_L
+namespace TEMP_OUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x42;
 };
 
-namespace REG_GYRO_XOUT_H
+namespace GYRO_XOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x43;
 };
 
-namespace REG_GYRO_XOUT_L
+namespace GYRO_XOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x44;
 };
 
-namespace REG_GYRO_YOUT_H
+namespace GYRO_YOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x45;
 };
 
-namespace REG_GYRO_YOUT_L
+namespace GYRO_YOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x46;
 };
 
-namespace REG_GYRO_ZOUT_H
+namespace GYRO_ZOUT_H
 {
     inline constexpr uint8_t ADDRESS = 0x47;
 };
 
-namespace REG_GYRO_ZOUT_L
+namespace GYRO_ZOUT_L
 {
     inline constexpr uint8_t ADDRESS = 0x48;
 };
 
-namespace REG_WHO_AM_I
+namespace WHO_AM_I
 {
     inline constexpr uint8_t ADDRESS = 0x75;
     inline constexpr uint8_t RESET = 0x70;
 };
 
-}   // namespace MPU6500
+}   // namespace MPU6500_REG

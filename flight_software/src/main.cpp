@@ -3,6 +3,8 @@
 #include "BoardConfig.h"
 #include "Logger.h"
 
+#include "MPU6500.h"
+
 static const char TAG[] = "MAIN";
 
 // App_Init is called before the freeRTOS scheduler runs - initialize all freeRTOS tasks/objects here

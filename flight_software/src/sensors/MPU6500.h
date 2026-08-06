@@ -40,43 +40,54 @@ public:
     bool readData(MPU6500_Data_t& dataOut);
 
 private:
-    SPI_HandleTypeDef* hspi_;
+    SPI_HandleTypeDef* _hspi;
 
     /**
      * @brief Read an 8bit register from the device
-     * @param out Buffer to store output
+     * @param address Register address to read from
+     * @param data Buffer to store output
      * @return True if succesful, False otherwise
      */
-    bool readRegister_(uint8_t& out);
+    bool _readRegister(uint8_t address, uint8_t& data);
 
     /**
-     * @brief Write an 8bit register from the device
-     * @param in Byte to write
+     * @brief Write an 8bit register to the device
+     * @param address Register address to write to
+     * @param data Byte to write
      * @return True if succesful, False otherwise
      */
-    bool writeRegister_(uint8_t in);
+    bool _writeRegister(uint8_t address, uint8_t data);
 };
 
 // ===========================
 // Implementation
 // ===========================
 
-bool MPU6500::readRegister_(uint8_t& out)
+bool MPU6500::_readRegister(uint8_t address, uint8_t& data)
 {
-    (void)out;
+    (void)address;
+    (void)data;
     return false;
 }
 
-bool MPU6500::writeRegister_(uint8_t in)
+bool MPU6500::_writeRegister(uint8_t address, uint8_t data)
 {
-    (void)in;
+    (void)address;
+    (void)data;
     return false;
 }
 
 bool MPU6500::initialize(SPI_HandleTypeDef* hspi)
 {
-    hspi_ = hspi;
-    return true;
+    bool ret = false;
+
+    if (hspi != nullptr)
+    {
+        _hspi = hspi;
+        ret = true;
+    }
+
+    return et;
 }
 
 bool MPU6500::readData(MPU6500_Data_t& dataOut)

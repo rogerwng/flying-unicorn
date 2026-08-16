@@ -8,6 +8,8 @@ namespace MPU6500_REG
 // ===========================
 // Register map
 // ===========================
+inline constexpr uint8_t READ_MASK = 0x7F; // MSB = 0
+inline constexpr uint8_t WRITE_MASK = 0x80; // MSB = 1
 
 namespace CONFIG
 {
